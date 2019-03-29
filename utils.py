@@ -17,7 +17,8 @@ def estimate_block_assignment(A, B, k=2, svd='randomized', random_state=None):
 
 
 def permute_edges(A):
-    return np.random.permutation(A)
+    # return np.random.permutation(A)
+    return np.random.permutation(A.flatten()).reshape(A.shape)
 
 
 def permute_matrix(A):

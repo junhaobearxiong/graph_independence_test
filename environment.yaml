@@ -77,5 +77,5 @@ dependencies:
     - wcwidth==0.1.7
     - webencodings==0.5.1
     - widgetsnbextension==3.4.2
-prefix: /Users/junhaoxiong 1/Documents/Projects/NeuroData/graph_independence_test/env
+prefix: /Users/jxiong/Documents/Projects/graph_independence_test/env
 
