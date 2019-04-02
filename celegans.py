@@ -6,28 +6,28 @@ import sys
 from tqdm import tqdm
 import multiprocessing as mp
 
-
 from graspy.utils import get_multigraph_intersect_lcc, is_symmetric
 
 from mgcpy.independence_tests.mgc.mgc import MGC
 
-from utils import estimate_block_assignment, permute_edges, block_permute, \
-    permute_matrix, triu_no_diag, to_distance_mtx, identity, power
+from utils import estimate_block_assignment, block_permute, sort_graph \
+    triu_no_diag, to_distance_mtx, identity, power
 
 
 def pvalue(A, B, indept_test, transform_func, k=10, null_mc=500,
-           svd='randomized', random_state=None):
+           block_est_repeats=1):
     test_stat_alternative, _ = indept_test.test_statistic(
         matrix_X=transform_func(A), matrix_Y=transform_func(B))
 
-    block_assignment = estimate_block_assignment(A, B, k=k, svd=svd,
-                                                 random_state=random_state)
+    block_assignment = estimate_block_assignment(A, B, k=k,
+                                                 num_repeats=block_est_repeats)
+    B_sorted = sort_graph(B, block_assignment)
 
     test_stat_null_array = np.zeros(null_mc)
     for j in tqdm(range(null_mc)):
         A_null = block_permute(A, block_assignment)
         test_stat_null, _ = indept_test.test_statistic(
-            matrix_X=transform_func(A_null), matrix_Y=transform_func(B))
+            matrix_X=transform_func(A_null), matrix_Y=transform_func(B_sorted))
         test_stat_null_array[j] = test_stat_null
 
     p_value = np.where(test_stat_null_array > test_stat_alternative)[
