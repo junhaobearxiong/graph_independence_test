@@ -10,21 +10,22 @@ from graspy.utils import get_multigraph_intersect_lcc, is_symmetric
 
 from mgcpy.independence_tests.mgc.mgc import MGC
 
-from utils import estimate_block_assignment, block_permute, sort_graph \
-    triu_no_diag, to_distance_mtx, identity, power
+from utils import estimate_block_assignment, block_permute, sort_graph, \
+    to_distance_mtx, identity
 
 
-def pvalue(A, B, indept_test, transform_func, k=10, null_mc=500,
+def pvalue(A, B, indept_test, transform_func, k=10, set_k=False, null_mc=500,
            block_est_repeats=1):
     test_stat_alternative, _ = indept_test.test_statistic(
         matrix_X=transform_func(A), matrix_Y=transform_func(B))
 
-    block_assignment = estimate_block_assignment(A, B, k=k,
+    block_assignment = estimate_block_assignment(A, B, k=k, set_k=set_k,
                                                  num_repeats=block_est_repeats)
     B_sorted = sort_graph(B, block_assignment)
 
     test_stat_null_array = np.zeros(null_mc)
     for j in tqdm(range(null_mc)):
+        # A_null is the permuted matrix after being sorted by block assignment
         A_null = block_permute(A, block_assignment)
         test_stat_null, _ = indept_test.test_statistic(
             matrix_X=transform_func(A_null), matrix_Y=transform_func(B_sorted))
@@ -35,33 +36,50 @@ def pvalue(A, B, indept_test, transform_func, k=10, null_mc=500,
     return p_value
 
 
-def preprocess_csv(file1, file2):
-    df1 = pd.read_csv(file1, header=None).values
-    df2 = pd.read_csv(file2, header=None).values
-    df1, df2 = get_multigraph_intersect_lcc([df1, df2])
-    df1 = np.where(df1 > 0, 1, 0).astype(float)
-    df2 = np.where(df2 > 0, 1, 0).astype(float)
-    return df1, df2
+def preprocess_csv(chem_file, gap_file, chem_cell_file, gap_cell_file):
+    chem = pd.read_csv(chem_file, header=None).values
+    gap = pd.read_csv(gap_file, header=None).values
+    chem_cell = pd.read_csv(chem_cell_file, header=None)
+    gap_cell = pd.read_csv(gap_cell_file, header=None)
+    chem_cell = np.squeeze(chem_cell.values)
+    gap_cell = np.squeeze(gap_cell.values)
+
+    # take intersection
+    common_cell, chem_idx, gap_idx = np.intersect1d(chem_cell, gap_cell,
+                                                    return_indices=True)
+    chem_idx = np.sort(chem_idx)
+    gap_idx = np.sort(gap_idx)
+    chem = chem[np.ix_(chem_idx, chem_idx)]
+    gap = gap[np.ix_(gap_idx, gap_idx)]
+
+    # convert to unweighted
+    chem = np.where(chem > 0, 1, 0).astype(float)
+    gap = np.where(gap > 0, 1, 0).astype(float)
+
+    return chem, gap
 
 
 def pvalue_parallel(inputs):
-    chem_male = inputs[0]
-    gap_male = inputs[1]
-    mgc = inputs[2]
-    return pvalue(A=chem_male, B=gap_male, indept_test=mgc,
-                  null_mc=500,
-                  transform_func=to_distance_mtx,
-                  svd='randomized',
-                  random_state=None)
+    chem = inputs[0]
+    gap = inputs[1]
+    k = inputs[2]
+    mgc = MGC(compute_distance_matrix=identity)
+    pval = pvalue(chem, gap, indept_test=mgc, transform_func=to_distance_mtx,
+                  k=k, set_k=True, block_est_repeats=100)
+
+    return (k, pval)
 
 
 def main(argv):
-    num_repeats = int(argv[0])
-    file1 = 'celegans_data/male_chem_A_full_undirected.csv'
-    file2 = 'celegans_data/male_gap_A_full_undirected.csv'
-    chem_male, gap_male = preprocess_csv(file1, file2)
-    mgc = MGC(compute_distance_matrix=identity)
-    inputs = [(chem_male, gap_male, mgc) for i in range(num_repeats)]
+    chem_file = 'celegans_data/male_chem_A_full_undirected.csv'
+    gap_file = 'celegans_data/male_gap_A_full_undirected.csv'
+    chem_cell_file = 'celegans_data/male_chem_full_cells.csv'
+    gap_cell_file = 'celegans_data/male_gap_full_cells.csv'
+    chem, gap = preprocess_csv(chem_file, gap_file, chem_cell_file,
+                               gap_cell_file)
+    max_k = int(argv[0])
+    k_arr = np.linspace(1, max_k, max_k, dtype=int)
+    inputs = [(chem, gap, k) for k in k_arr]
 
     with mp.Pool(mp.cpu_count() - 1) as p:
         pval = p.map(pvalue_parallel, inputs)
