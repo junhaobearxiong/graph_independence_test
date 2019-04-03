@@ -48,8 +48,8 @@ def _permute_on_diag(A):
 
 
 def block_permute(A, block_assignment):
-    block_assignment = np.sort(block_assignment)
     A = sort_graph(A, block_assignment)
+    block_assignment = np.sort(block_assignment)
     permuted_A = np.zeros_like(A)
     num_blocks = np.unique(block_assignment).size
     # get the index of the blocks in the upper triangular
