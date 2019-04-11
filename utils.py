@@ -35,11 +35,11 @@ def estimate_block_assignment(A, B, k=10, set_k=False, num_repeats=1,
     return best_model.predict(Vhat)
 
 
-def _permute_off_diag(A):
+def permute_off_diag(A):
     return np.random.permutation(A.flatten()).reshape(A.shape)
 
 
-def _permute_on_diag(A):
+def permute_on_diag(A):
     triu = np.random.permutation(triu_no_diag(A).flatten())
     A_perm = np.zeros_like(A)
     A_perm[np.triu_indices(A.shape[0], 1)] = triu
@@ -62,9 +62,9 @@ def block_permute(A, block_assignment):
         block = A[np.ix_(block_i_idx, block_j_idx)]
         # permute only the upper triangular if the block is on the diagonal
         if i == j:
-            permuted_block = _permute_on_diag(block)
+            permuted_block = permute_on_diag(block)
         else:
-            permuted_block = _permute_off_diag(block)
+            permuted_block = permute_off_diag(block)
         permuted_A[np.ix_(block_i_idx, block_j_idx)] = permuted_block
     permuted_A = symmetrize(permuted_A)
     return permuted_A
