@@ -10,6 +10,10 @@ from graspy.cluster import GaussianCluster, KMeansCluster
 from graspy.utils import symmetrize
 
 
+def binarize(A):
+    return np.where(A > 0, 1, 0).astype(float)
+
+
 def estimate_block_assignment(A, B, k=10, set_k=False, num_repeats=1,
                               svd='randomized', random_state=None):
 
