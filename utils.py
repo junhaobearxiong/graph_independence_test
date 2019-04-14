@@ -156,7 +156,7 @@ def to_distance_mtx(A):
     '''
     convert graph to distance matrix
     '''
-    distance_mtx_A = 1 - A
+    distance_mtx_A = 1 - (A / np.max(A))
     # the graph assumes no self loop, so a node is disconnected from itself
     # but in the distance matrices the diagonal entries should always be 0
     # instead of 1
