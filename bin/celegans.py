@@ -6,12 +6,12 @@ import sys
 from tqdm import tqdm
 import multiprocessing as mp
 
-from graspy.utils import get_multigraph_intersect_lcc, is_symmetric
+from graspy.utils import is_symmetric
 
 from mgcpy.independence_tests.mgc.mgc import MGC
 
-from utils import estimate_block_assignment, block_permute, sort_graph,
-to_distance_mtx, identity, pvalue
+from utils import estimate_block_assignment, block_permute, sort_graph, \
+    to_distance_mtx, identity, pvalue
 
 
 def preprocess_csv(chem_file, gap_file, chem_cell_file, gap_cell_file):
@@ -37,35 +37,37 @@ def test_stats_parallel(inputs):
     chem = inputs[0]
     gap = inputs[1]
     k = inputs[2]
+    reps = inputs[3]
     mgc = MGC(compute_distance_matrix=identity)
-    reps = 100
     test_stats_null_arr = np.zeros(reps)
-    for r in range(reps):
-        block_assignment = estimate_block_assignment(left, right_sorted,
-                                                     k=k, set_k=True, num_repeats=50)
+    for r in tqdm(range(reps)):
+        block_assignment = estimate_block_assignment(chem, gap,
+                                                     k=k, set_k=True,
+                                                     num_repeats=50)
         test_stats_null, _ = mgc.test_statistic(
-            to_distance_mtx(block_permute(left, block_assignment)),
-            to_distance_mtx(sort_graph(right_sorted, block_assignment)))
+            to_distance_mtx(block_permute(chem, block_assignment)),
+            to_distance_mtx(sort_graph(gap, block_assignment)))
         test_stats_null_arr[r] = test_stats_null
-
-    return (k, pval)
+    print('finish k={}'.format(k))
+    return (k, test_stats_null_arr)
 
 
 def main(argv):
-    chem_file = 'celegans_data/male_chem_A_full_undirected.csv'
-    gap_file = 'celegans_data/male_gap_A_full_undirected.csv'
-    chem_cell_file = 'celegans_data/male_chem_full_cells.csv'
-    gap_cell_file = 'celegans_data/male_gap_full_cells.csv'
+    reps = int(argv[0])
+    chem_file = 'data/celegans/male_chem_A_full_undirected.csv'
+    gap_file = 'data/celegans/male_gap_A_full_undirected.csv'
+    chem_cell_file = 'data/celegans/male_chem_full_cells.csv'
+    gap_cell_file = 'data/celegans/male_gap_full_cells.csv'
     chem, gap = preprocess_csv(chem_file, gap_file, chem_cell_file,
                                gap_cell_file)
-    k_arr = np.logspace(start=1, stop=7, num=7, base=2, dtype=int)
+    k_arr = np.logspace(start=1, stop=9, num=9, base=2, dtype=int)
 
-    inputs = [(chem, gap, k) for k in k_arr]
+    inputs = [(chem, gap, k, reps) for k in k_arr]
 
     with mp.Pool(mp.cpu_count() - 1) as p:
-        pval = p.map(pvalue_parallel, inputs)
-    with open('celegans_data/pvalue.pkl', 'wb') as f:
-        pickle.dump(pval, f)
+        test_stats = p.map(test_stats_parallel, inputs)
+    with open('results/celegans_teststats_null.pkl', 'wb') as f:
+        pickle.dump(test_stats, f)
 
 
 if __name__ == '__main__':
