@@ -10,30 +10,8 @@ from graspy.utils import get_multigraph_intersect_lcc, is_symmetric
 
 from mgcpy.independence_tests.mgc.mgc import MGC
 
-from utils import estimate_block_assignment, block_permute, sort_graph, \
-    to_distance_mtx, identity
-
-
-def pvalue(A, B, indept_test, transform_func, k=10, set_k=False, null_mc=500,
-           block_est_repeats=1):
-    test_stat_alternative, _ = indept_test.test_statistic(
-        matrix_X=transform_func(A), matrix_Y=transform_func(B))
-
-    block_assignment = estimate_block_assignment(A, B, k=k, set_k=set_k,
-                                                 num_repeats=block_est_repeats)
-    B_sorted = sort_graph(B, block_assignment)
-
-    test_stat_null_array = np.zeros(null_mc)
-    for j in tqdm(range(null_mc)):
-        # A_null is the permuted matrix after being sorted by block assignment
-        A_null = block_permute(A, block_assignment)
-        test_stat_null, _ = indept_test.test_statistic(
-            matrix_X=transform_func(A_null), matrix_Y=transform_func(B_sorted))
-        test_stat_null_array[j] = test_stat_null
-
-    p_value = np.where(test_stat_null_array > test_stat_alternative)[
-        0].shape[0] / test_stat_null_array.shape[0]
-    return p_value
+from utils import estimate_block_assignment, block_permute, sort_graph,
+to_distance_mtx, identity, pvalue
 
 
 def preprocess_csv(chem_file, gap_file, chem_cell_file, gap_cell_file):
@@ -52,20 +30,23 @@ def preprocess_csv(chem_file, gap_file, chem_cell_file, gap_cell_file):
     chem = chem[np.ix_(chem_idx, chem_idx)]
     gap = gap[np.ix_(gap_idx, gap_idx)]
 
-    # convert to unweighted
-    chem = np.where(chem > 0, 1, 0).astype(float)
-    gap = np.where(gap > 0, 1, 0).astype(float)
-
     return chem, gap
 
 
-def pvalue_parallel(inputs):
+def test_stats_parallel(inputs):
     chem = inputs[0]
     gap = inputs[1]
     k = inputs[2]
     mgc = MGC(compute_distance_matrix=identity)
-    pval = pvalue(chem, gap, indept_test=mgc, transform_func=to_distance_mtx,
-                  k=k, set_k=True, block_est_repeats=100)
+    reps = 100
+    test_stats_null_arr = np.zeros(reps)
+    for r in range(reps):
+        block_assignment = estimate_block_assignment(left, right_sorted,
+                                                     k=k, set_k=True, num_repeats=50)
+        test_stats_null, _ = mgc.test_statistic(
+            to_distance_mtx(block_permute(left, block_assignment)),
+            to_distance_mtx(sort_graph(right_sorted, block_assignment)))
+        test_stats_null_arr[r] = test_stats_null
 
     return (k, pval)
 
@@ -77,8 +58,8 @@ def main(argv):
     gap_cell_file = 'celegans_data/male_gap_full_cells.csv'
     chem, gap = preprocess_csv(chem_file, gap_file, chem_cell_file,
                                gap_cell_file)
-    max_k = int(argv[0])
-    k_arr = np.linspace(1, max_k, max_k, dtype=int)
+    k_arr = np.logspace(start=1, stop=7, num=7, base=2, dtype=int)
+
     inputs = [(chem, gap, k) for k in k_arr]
 
     with mp.Pool(mp.cpu_count() - 1) as p:

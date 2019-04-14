@@ -113,7 +113,7 @@ def pvalue(A, B, indept_test, transform_func, k=10, set_k=False, null_mc=500,
 
     p_value = np.where(test_stat_null_array > test_stat_alternative)[
         0].shape[0] / test_stat_null_array.shape[0]
-    return p_value
+    return (p_value, np.unique(block_assignment).size)
 
 
 '''
