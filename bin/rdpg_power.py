@@ -92,14 +92,14 @@ def power_parallel(inputs):
         test = MGC(compute_distance_matrix=identity)
         test_power = corr_rdpg_power(test, to_distance_mtx, n=n, mc=nmc)
     print('finish {} for rho={}, n={}'.format(name, rho, n))
-    return (test_power, test_khat)
+    return (inputs, test_power, test_khat)
 
 
 def fill_inputs(nmc):
     inputs = []
-    n_arr = np.linspace(10, 100, 10, dtype=int)
-    rho_arr = np.array([0, 0.1])
-    test_names = ['pearson', 'dcorr']
+    n_arr = np.linspace(10, 50, 5, dtype=int)
+    rho_arr = np.array([0])
+    test_names = ['dcorr']
     for name in test_names:
         for i, rho in enumerate(rho_arr):
             for j, n in enumerate(n_arr):

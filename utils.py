@@ -27,7 +27,7 @@ def estimate_block_assignment(A, B, k=10, set_k=False, num_repeats=1,
     # use set number of clusters
     if set_k:
         for rep in range(num_repeats):
-            model = GaussianMixture(n_componensts=k)
+            model = GaussianMixture(n_components=k)
             models.append(model.fit(Vhat))
             bics.append(model.bic(Vhat))
     else:
