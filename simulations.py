@@ -4,6 +4,45 @@ from graspy.utils import symmetrize, is_symmetric
 from utils import non_diagonal
 
 
+def rho_sbm_diff_block(rho, k, AL, BL, n=100):
+    if sum(k) != n:
+        raise ValueError('the total number of vertices in each community \
+        should equal n')
+
+    if np.any(AL == 0) or np.any(AL == 1) \
+            or np.any(BL == 0) or np.any(BL == 1):
+        raise ValueError('block probabilities AL and BL cannot have 0 or 1')
+
+    largest_rho = np.minimum(np.sqrt(AL*(1-BL)/((1-AL)*BL)),
+                             np.sqrt((1-AL)*BL/(AL*(1-BL))))
+    if np.any(rho > largest_rho):
+        raise ValueError('the largest valid rho for the specified AL and BL is \
+        {}. Please specify a rho that is smaller than the largest valid rho.'.format(
+            np.amin(largest_rho)))
+
+    AL = symmetrize(AL)
+    BL = symmetrize(BL)
+    A = sbm(k, AL)
+
+    AL_new = np.zeros_like(A)
+    BL_new = np.zeros_like(A)
+    block_indices = np.insert(np.cumsum(np.array(k)), 0, 0)
+    for i in range(AL.shape[0]):
+        for j in range(AL.shape[1]):
+            AL_new[block_indices[i]:block_indices[i+1],
+                   block_indices[j]:block_indices[j+1]] = AL[i, j]
+            BL_new[block_indices[i]:block_indices[i+1],
+                   block_indices[j]:block_indices[j+1]] = BL[i, j]
+
+    prob = BL_new + A*rho*np.sqrt((1-AL_new)*BL_new*(1-BL_new)/AL_new) - \
+        (1-A)*rho*np.sqrt(AL_new*BL_new*(1-BL_new)/(1-AL_new))
+    B = np.random.binomial(1, prob)
+    B = B.astype(np.float64)
+    B = symmetrize(B)
+    np.fill_diagonal(B, 0)
+    return A, B
+
+
 def rho_rdpg(rho, n=50):
     X = np.random.uniform(0, 1, (n, 1))
     P = np.dot(X, X.T)

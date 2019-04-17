@@ -27,7 +27,7 @@ def estimate_block_assignment(A, B, k=10, set_k=False, num_repeats=1,
     # use set number of clusters
     if set_k:
         for rep in range(num_repeats):
-            model = GaussianMixture(n_components=k)
+            model = GaussianMixture(n_componensts=k)
             models.append(model.fit(Vhat))
             bics.append(model.bic(Vhat))
     else:
@@ -194,6 +194,8 @@ def sbm_params(setting='homog_balanced', a=0.7, b=0.5, c=0.3, k=2):
         L[np.diag_indices(k)] = a
         L[np.triu_indices(k, 1)] = b
         L = symmetrize(L)
+    else:
+        raise ValueError('setting {} is not defined'.format(setting))
     return L
 
 
