@@ -21,10 +21,13 @@ from itertools import permutations
 import multiprocessing as mp
 
 
-def corr_rdpg(n=50):
+def corr_rdpg(n, null):
     X = np.random.uniform(0, 1, (n, 1))
     A = rdpg(X, rescale=False, loops=False)
-    Y = np.square(X)
+    if null:
+        Y = np.random.uniform(0, 1, (n, 1))
+    else:
+        Y = np.square(X)
     B = rdpg(Y, rescale=False, loops=False)
     return A, B
 
@@ -48,18 +51,18 @@ def block_permute_vertex(A, block_assignment):
     return permuted_A
 
 
-def corr_rdpg_power(indept_test, transform_func, n, mc=500, alpha=0.05):
+def corr_rdpg_power(indept_test, transform_func, n, null, mc=500, alpha=0.05):
     test_stat_null_array = np.zeros(mc)
     test_stat_alt_array = np.zeros(mc)
     khat = np.zeros(mc)
-    for i in range(mc):
-        A, B = corr_rdpg(n)
+    for i in tqdm(range(mc)):
+        A, B = corr_rdpg(n, null)
         test_stat_alt, _ = indept_test.test_statistic(
             matrix_X=transform_func(A), matrix_Y=transform_func(B))
         test_stat_alt_array[i] = test_stat_alt
 
         # generate the null by permutation
-        block_assignment = estimate_block_assignment(A, B, k=A.shape[0]//2, num_repeats=10)
+        block_assignment = estimate_block_assignment(A, B, k=10, num_repeats=10)
         khat[i] = np.unique(block_assignment).size
 
         B_sorted = sort_graph(B, block_assignment)
@@ -84,22 +87,22 @@ def power_parallel(inputs):
     nmc = inputs[3]
     if name == 'pearson':
         test = RVCorr(which_test='pearson')
-        test_power, test_khat = corr_rdpg_power(test, triu_no_diag, n=n, mc=nmc)
+        test_power, test_khat = corr_rdpg_power(test, triu_no_diag, n=n, null=rho, mc=nmc)
     elif name == 'dcorr':
         test = DCorr(compute_distance_matrix=identity)
-        test_power, test_khat = corr_rdpg_power(test, to_distance_mtx, n=n, mc=nmc)
+        test_power, test_khat = corr_rdpg_power(test, to_distance_mtx, n=n, null=rho, mc=nmc)
     elif name == 'mgc':
         test = MGC(compute_distance_matrix=identity)
-        test_power = corr_rdpg_power(test, to_distance_mtx, n=n, mc=nmc)
+        test_power = corr_rdpg_power(test, to_distance_mtx, n=n, null=rho, mc=nmc)
     print('finish {} for rho={}, n={}'.format(name, rho, n))
     return (inputs, test_power, test_khat)
 
 
 def fill_inputs(nmc):
     inputs = []
-    n_arr = np.linspace(10, 50, 5, dtype=int)
-    rho_arr = np.array([0])
-    test_names = ['dcorr']
+    n_arr = np.linspace(10, 200, 20, dtype=int)
+    rho_arr = np.array([True, False])
+    test_names = ['pearson', 'dcorr']
     for name in test_names:
         for i, rho in enumerate(rho_arr):
             for j, n in enumerate(n_arr):
