@@ -93,7 +93,7 @@ def power_parallel(inputs):
         test_power, test_khat = corr_rdpg_power(test, to_distance_mtx, n=n, null=rho, mc=nmc)
     elif name == 'mgc':
         test = MGC(compute_distance_matrix=identity)
-        test_power = corr_rdpg_power(test, to_distance_mtx, n=n, null=rho, mc=nmc)
+        test_power, test_khat = corr_rdpg_power(test, to_distance_mtx, n=n, null=rho, mc=nmc)
     print('finish {} for rho={}, n={}'.format(name, rho, n))
     return (inputs, test_power, test_khat)
 
