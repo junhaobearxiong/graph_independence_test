@@ -15,5 +15,5 @@ def read_dwi(subject_id, session_num):
 
 def read_fmri(subject_id, session_num):
     file_name = fmri_dirname+fmri_file_format.format(subject_id, session_num)
-    nx_out = nx.read_gpickle(file2)
+    nx_out = nx.read_gpickle(file_name)
     return nx.to_numpy_array(nx_out)
