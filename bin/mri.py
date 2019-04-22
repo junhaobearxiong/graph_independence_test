@@ -21,6 +21,9 @@ def fill_inputs(case):
         for subject_id in subject_list:
             inputs.append((read_dwi(subject_id, session_num),
                            read_fmri(subject_id, session_num)))
+    else:
+        raise ValueError('case {} has not been implemented'.format(case))
+    return inputs
 
 
 def pvalue_parallel(param):
