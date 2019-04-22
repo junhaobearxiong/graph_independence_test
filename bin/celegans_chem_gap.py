@@ -14,13 +14,16 @@ from utils import estimate_block_assignment, block_permute, sort_graph, \
     to_distance_mtx, identity, pvalue
 
 
-def preprocess_csv(chem_file, gap_file, chem_cell_file, gap_cell_file):
+def preprocess_csv(weighted):
+    chem_file = 'data/celegans/male_chem_A_full_undirected.csv'
+    gap_file = 'data/celegans/male_gap_A_full_undirected.csv'
+    chem_cell_file = 'data/celegans/male_chem_full_cells.csv'
+    gap_cell_file = 'data/celegans/male_gap_full_cells.csv'
+
     chem = pd.read_csv(chem_file, header=None).values
     gap = pd.read_csv(gap_file, header=None).values
-    chem_cell = pd.read_csv(chem_cell_file, header=None)
-    gap_cell = pd.read_csv(gap_cell_file, header=None)
-    chem_cell = np.squeeze(chem_cell.values)
-    gap_cell = np.squeeze(gap_cell.values)
+    chem_cell = np.squeeze(pd.read_csv(chem_cell_file, header=None).values)
+    gap_cell = np.squeeze(pd.read_csv(gap_cell_file, header=None).values)
 
     # take intersection
     common_cell, chem_idx, gap_idx = np.intersect1d(chem_cell, gap_cell,
@@ -30,7 +33,12 @@ def preprocess_csv(chem_file, gap_file, chem_cell_file, gap_cell_file):
     chem = chem[np.ix_(chem_idx, chem_idx)]
     gap = gap[np.ix_(gap_idx, gap_idx)]
 
-    return chem, gap
+    if weighted:
+        return chem, gap
+    else:
+        chem_uw = np.where(chem > 0, 1, 0).astype(float)
+        gap_uw = np.where(gap > 0, 1, 0).astype(float)
+        return chem_uw, gap_uw
 
 
 def test_stats_parallel(inputs):
@@ -43,7 +51,7 @@ def test_stats_parallel(inputs):
     for r in tqdm(range(reps)):
         block_assignment = estimate_block_assignment(chem, gap,
                                                      k=k, set_k=True,
-                                                     num_repeats=50)
+                                                     num_repeats=10)
         test_stats_null, _ = mgc.test_statistic(
             to_distance_mtx(block_permute(chem, block_assignment)),
             to_distance_mtx(sort_graph(gap, block_assignment)))
@@ -54,19 +62,22 @@ def test_stats_parallel(inputs):
 
 def main(argv):
     reps = int(argv[0])
-    chem_file = 'data/celegans/male_chem_A_full_undirected.csv'
-    gap_file = 'data/celegans/male_gap_A_full_undirected.csv'
-    chem_cell_file = 'data/celegans/male_chem_full_cells.csv'
-    gap_cell_file = 'data/celegans/male_gap_full_cells.csv'
-    chem, gap = preprocess_csv(chem_file, gap_file, chem_cell_file,
-                               gap_cell_file)
+    weighted = bool(int(argv[1]))
+
+    chem, gap = preprocess_csv(weighted)
     k_arr = np.logspace(start=1, stop=9, num=9, base=2, dtype=int)
 
     inputs = [(chem, gap, k, reps) for k in k_arr]
 
     with mp.Pool(mp.cpu_count() - 1) as p:
         test_stats = p.map(test_stats_parallel, inputs)
-    with open('results/celegans_teststats_null.pkl', 'wb') as f:
+
+    if weighted:
+        file_name = 'results/celegans_chem_gap_weighted_teststats_null.pkl'
+    else:
+        file_name = 'results/celegans_chem_gap_unweighted_teststats_null.pkl'
+
+    with open(file_name, 'wb') as f:
         pickle.dump(test_stats, f)
 
 

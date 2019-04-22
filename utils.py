@@ -116,24 +116,6 @@ def pvalue(A, B, indept_test, transform_func, k=10, set_k=False, null_mc=500,
     return (p_value, np.unique(block_assignment).size)
 
 
-'''
-def pvalue(A, B, indept_test, transform_func, null_mc=1000):
-    test_stat_alternative, _ = indept_test.test_statistic(
-        matrix_X=transform_func(A), matrix_Y=transform_func(B))
-    test_stat_null_array = np.zeros(null_mc)
-    for j in range(null_mc):
-        # permutation test to generate the null
-        A_null = permute_matrix(A)
-        test_stat_null, _ = indept_test.test_statistic(
-            matrix_X=transform_func(A_null), matrix_Y=transform_func(B))
-        test_stat_null_array[j] = test_stat_null
-
-    p_value = np.where(test_stat_null_array > test_stat_alternative)[
-        0].shape[0] / test_stat_null_array.shape[0]
-    return p_value
-'''
-
-
 def pvalue_distribution(sample_func, indept_test, transform_func, null_mc=1000,
                         pval_mc=500, is_null=False, **kwargs):
     p_value_mc = np.zeros(pval_mc)
