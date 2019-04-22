@@ -18,13 +18,26 @@ def fill_inputs(case):
     inputs = []
     session_num = 1
     if case == 1:
+        # dwi vs. fmri for a single session
         for subject_id in subject_list:
             inputs.append((read_dwi(subject_id, session_num),
                            read_fmri(subject_id, session_num)))
     elif case == 2:
+        # dwi subject-wise comparison for a single session
         for subject1, subject2 in pairs_from_list(subject_list):
             inputs.append((read_dwi(subject1, session_num),
                            read_dwi(subject2, session_num)))
+    elif case == 3:
+        # fmri subject-wise comparison for a single session
+        for subject1, subject2 in pairs_from_list(subject_list):
+            inputs.append((read_fmri(subject1, session_num),
+                           read_fmri(subject2, session_num)))
+    elif case == 4:
+        # dwi vs. fmri for all sessions
+        for num in session_num:
+            for subject_id in subject_list:
+                inputs.append((read_dwi(subject_id, num),
+                               read_fmri(subject_id, num)))
     else:
         raise ValueError('case {} has not been implemented'.format(case))
     return inputs
