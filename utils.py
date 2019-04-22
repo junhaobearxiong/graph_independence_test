@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm
 import pandas as pd
 
 from sklearn.mixture import GaussianMixture
