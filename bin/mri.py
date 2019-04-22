@@ -8,7 +8,7 @@ from mgcpy.independence_tests.mgc.mgc import MGC
 
 from utils import to_distance_mtx, pvalue, identity
 
-from load_data import read_dwi, read_fmri
+from load_data import read_dwi, read_fmri, pairs_from_list
 
 subject_list = ['00254{}'.format(i) for i in np.arange(27, 57)]
 session_list = [i for i in range(1, 11)]
@@ -16,11 +16,15 @@ session_list = [i for i in range(1, 11)]
 
 def fill_inputs(case):
     inputs = []
+    session_num = 1
     if case == 1:
-        session_num = 1
         for subject_id in subject_list:
             inputs.append((read_dwi(subject_id, session_num),
                            read_fmri(subject_id, session_num)))
+    elif case == 2:
+        for subject1, subject2 in pairs_from_list(subject_list):
+            inputs.append((read_dwi(subject1, session_num),
+                           read_dwi(subject2, session_num)))
     else:
         raise ValueError('case {} has not been implemented'.format(case))
     return inputs
