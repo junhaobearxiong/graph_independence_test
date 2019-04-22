@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 import multiprocessing as mp
+import sys
 
 from mgcpy.independence_tests.mgc.mgc import MGC
 
@@ -16,10 +17,10 @@ session_list = [i for i in range(1, 11)]
 def fill_inputs(case):
     inputs = []
     if case == 1:
+        session_num = 1
         for subject_id in subject_list:
-            for session_num in session_list:
-                inputs.append((read_dwi(subject_id, session_num),
-                               read_fmri(subject_id, session_num)))
+            inputs.append((read_dwi(subject_id, session_num),
+                           read_fmri(subject_id, session_num)))
 
 
 def pvalue_parallel(param):
