@@ -9,6 +9,22 @@ from graspy.embed import JointRDPG
 from graspy.cluster import GaussianCluster, KMeansCluster
 from graspy.utils import symmetrize
 
+from mgcpy.independence_tests.mgc.mgc import MGC
+
+
+def get_null_test_stats(A, B, k_arr, reps):
+    mgc = MGC(compute_distance_matrix=identity)
+    test_stats_null_arr = np.zeros((k_arr.size, reps))
+    for i, k in enumerate(k_arr):
+        for r in tqdm(range(reps)):
+            block_assignment = estimate_block_assignment(A, B, k=k,
+                                                         set_k=True, num_repeats=10)
+            test_stats_null, _ = mgc.test_statistic(
+                to_distance_mtx(block_permute(A, block_assignment)),
+                to_distance_mtx(sort_graph(B, block_assignment)))
+            test_stats_null_arr[i, r] = test_stats_null
+    return test_stats_null_arr
+
 
 def binarize(A):
     return np.where(A > 0, 1, 0).astype(float)
