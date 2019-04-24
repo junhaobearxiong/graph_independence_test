@@ -15,10 +15,10 @@ from utils import estimate_block_assignment, block_permute, sort_graph, \
 
 
 def preprocess_csv(weighted):
-    chem_file = 'data/celegans/male_chem_A_full_undirected.csv'
-    gap_file = 'data/celegans/male_gap_A_full_undirected.csv'
-    chem_cell_file = 'data/celegans/male_chem_full_cells.csv'
-    gap_cell_file = 'data/celegans/male_gap_full_cells.csv'
+    chem_file = 'data/celegans/herm_chem_A_full_undirected.csv'
+    gap_file = 'data/celegans/herm_gap_A_full_undirected.csv'
+    chem_cell_file = 'data/celegans/herm_chem_full_cells.csv'
+    gap_cell_file = 'data/celegans/herm_gap_full_cells.csv'
 
     chem = pd.read_csv(chem_file, header=None).values
     gap = pd.read_csv(gap_file, header=None).values
@@ -28,8 +28,7 @@ def preprocess_csv(weighted):
     # take intersection
     common_cell, chem_idx, gap_idx = np.intersect1d(chem_cell, gap_cell,
                                                     return_indices=True)
-    chem_idx = np.sort(chem_idx)
-    gap_idx = np.sort(gap_idx)
+
     chem = chem[np.ix_(chem_idx, chem_idx)]
     gap = gap[np.ix_(gap_idx, gap_idx)]
 
@@ -65,7 +64,7 @@ def main(argv):
     weighted = bool(int(argv[1]))
 
     chem, gap = preprocess_csv(weighted)
-    k_arr = np.logspace(start=1, stop=9, num=9, base=2, dtype=int)
+    k_arr = np.logspace(start=1, stop=8, num=8, base=2, dtype=int)
 
     inputs = [(chem, gap, k, reps) for k in k_arr]
 

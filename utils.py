@@ -12,6 +12,10 @@ from graspy.utils import symmetrize
 from mgcpy.independence_tests.mgc.mgc import MGC
 
 
+def to_undirected(A):
+    return np.where(A > 0, 1, 0).astype(float)
+
+
 def get_null_test_stats(A, B, k_arr, reps):
     mgc = MGC(compute_distance_matrix=identity)
     test_stats_null_arr = np.zeros((k_arr.size, reps))
