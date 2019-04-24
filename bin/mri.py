@@ -28,10 +28,16 @@ def fill_inputs(case):
             inputs.append((read_dwi(subject1, session_num),
                            read_dwi(subject2, session_num)))
     elif case == 3:
-        # fmri subject-wise comparison for a single session
+        # dwi or fmri subject-wise comparison for a single session
         for subject1, subject2 in pairs_from_list(subject_list):
-            inputs.append((read_fmri(subject1, session_num),
-                           read_fmri(subject2, session_num)))
+            # determine which subject is dwi and which is fmri
+            choice = np.random.binomial(n=1, p=0.5, size=1)[0]
+            if choice:
+                inputs.append((read_dwi(subject1, session_num),
+                               read_fmri(subject2, session_num)))
+            else:
+                inputs.append((read_fmri(subject1, session_num),
+                               read_dwi(subject2, session_num)))
     elif case == 4:
         # dwi vs. fmri for all sessions
         for num in session_num:
