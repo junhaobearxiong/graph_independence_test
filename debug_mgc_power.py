@@ -29,8 +29,8 @@ def power_parallel(inputs):
 
 def fill_inputs():
     inputs = []
-    rho_arr = np.linspace(0.1, 0.9, 9, dtype=float)
-    n_arr = np.array([10, 50, 100, 200, 300, 400, 500])
+    rho_arr = np.linspace(0.1, 0.9, 5, dtype=float)
+    n_arr = np.array([10, 50, 100, 300, 500])
 
     for i, rho in enumerate(rho_arr):
         for j, n in enumerate(n_arr):
