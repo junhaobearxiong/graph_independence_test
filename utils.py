@@ -9,7 +9,75 @@ from graspy.embed import JointRDPG
 from graspy.cluster import GaussianCluster, KMeansCluster
 from graspy.utils import symmetrize
 
-from mgcpy.independence_tests.mgc.mgc import MGC
+from mgcpy.independence_tests.mgc import MGC
+
+
+def dcorr_power(indept_test, sim_func, mc=500, alpha=0.05,
+                given_blocks=False, blocks=None, **kwargs):
+    # power for any test that builds on distance matrices
+    # can use dcorr / mgc
+    test_stat_null_array = np.zeros(mc)
+    test_stat_alt_array = np.zeros(mc)
+    for i in range(mc):
+        A, B = sim_func(**kwargs)
+        if given_blocks:
+            block_assignment = blocks
+        else:
+            block_assignment = estimate_block_assignment(A, B)
+        A_null = block_permute(A, block_assignment)
+        B_sorted = sort_graph(B, block_assignment)
+
+        test_stat_alt, _ = indept_test.test_statistic(
+            matrix_X=to_distance_mtx(to_kernel(A)),
+            matrix_Y=to_distance_mtx(to_kernel(B)))
+        test_stat_null, _ = indept_test.test_statistic(
+            matrix_X=to_distance_mtx(to_kernel(A_null)),
+            matrix_Y=to_distance_mtx(to_kernel(B_sorted)))
+
+        test_stat_alt_array[i] = test_stat_alt
+        test_stat_null_array[i] = test_stat_null
+    critical_value = np.sort(test_stat_null_array)[math.ceil((1-alpha)*mc)]
+    power = np.where(test_stat_alt_array > critical_value)[0].shape[0] / mc
+    return power
+
+
+def pearson_power(indept_test, sim_func, mc=500, alpha=0.05,
+                  given_blocks=False, blocks=None, **kwargs):
+    # power for any test that uses vectorized matrix as samples
+    test_stat_null_array = np.zeros(mc)
+    test_stat_alt_array = np.zeros(mc)
+    for i in range(mc):
+        A, B = sim_func(**kwargs)
+        if given_blocks:
+            block_assignment = blocks
+        else:
+            block_assignment = estimate_block_assignment(A, B)
+        A_null = block_permute(A, block_assignment)
+        B_sorted = sort_graph(B, block_assignment)
+
+        test_stat_alt, _ = indept_test.test_statistic(
+            matrix_X=triu_no_diag(A), matrix_Y=triu_no_diag(B))
+        test_stat_null, _ = indept_test.test_statistic(
+            matrix_X=triu_no_diag(A_null), matrix_Y=triu_no_diag(B_sorted))
+
+        test_stat_alt_array[i] = test_stat_alt
+        test_stat_null_array[i] = test_stat_null
+    test_stat_null_array = np.absolute(test_stat_null_array)
+    test_stat_alt_array = np.absolute(test_stat_alt_array)
+    critical_value = np.sort(test_stat_null_array)[math.ceil((1-alpha)*mc)]
+    power = np.where(test_stat_alt_array > critical_value)[0].shape[0] / mc
+    return power
+
+
+def to_kernel(A):
+    D_vec = np.sum(A, axis=0)
+    with np.errstate(divide="ignore"):
+        D_root = 1 / np.sqrt(D_vec)  # this is 10x faster than ** -0.5
+    D_root[np.isinf(D_root)] = 0
+    D_root = np.diag(D_root)  # just change to sparse diag for sparse support
+    I = np.identity(A.shape[0])
+    K = I + D_root @ A @ D_root
+    return K
 
 
 def to_undirected(A):
@@ -22,7 +90,8 @@ def get_null_test_stats(A, B, k_arr, reps):
     for i, k in enumerate(k_arr):
         for r in tqdm(range(reps)):
             block_assignment = estimate_block_assignment(A, B, k=k,
-                                                         set_k=True, num_repeats=10)
+                                                         set_k=True,
+                                                         num_repeats=10)
             test_stats_null, _ = mgc.test_statistic(
                 to_distance_mtx(block_permute(A, block_assignment)),
                 to_distance_mtx(sort_graph(B, block_assignment)))
