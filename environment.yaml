@@ -44,7 +44,6 @@ dependencies:
     - kiwisolver==1.0.1
     - markupsafe==1.1.0
     - matplotlib==3.0.2
-    - mgcpy==0.2.0
     - mistune==0.8.4
     - nbconvert==5.4.1
     - nbformat==4.4.0

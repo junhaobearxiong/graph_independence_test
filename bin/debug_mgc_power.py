@@ -3,6 +3,7 @@ import math
 import pickle
 import pandas as pd
 from tqdm import tqdm
+import multiprocessing as mp
 
 from mgcpy.independence_tests.dcorr import DCorr
 from mgcpy.independence_tests.rv_corr import RVCorr
@@ -38,7 +39,7 @@ def fill_inputs():
     return inputs
 
 
-def main(argv):
+def main():
     inputs = fill_inputs()
 
     with mp.Pool(mp.cpu_count() - 1) as p:
@@ -48,4 +49,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

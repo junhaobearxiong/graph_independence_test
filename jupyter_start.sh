@@ -1,2 +1,2 @@
-PYTHONPATH=/Users/jxiong/Documents/Projects/:$(pwd) jupyter notebook > /tmp/jupyter.log 2>&1 &
+PYTHONPATH=/Users/jxiong/Documents/Projects/mgcpy:$(pwd) jupyter notebook > /tmp/jupyter.log 2>&1 &
 echo $! > .jupyter_pid
