@@ -230,7 +230,7 @@ def rho_sbm_marg(rho, k, AL, BL, n=100):
 
     AL = symmetrize(AL)
     BL = symmetrize(BL)
-    A = sbm([int(n/k)]*k, AL)
+    A = sbm([int(n/k)]*k, AL, loops=True)
     AL = np.repeat(np.repeat(AL, n//k, 0), n//k, 1)
     BL = np.repeat(np.repeat(BL, n//k, 0), n//k, 1)
     prob = BL + A*rho*np.sqrt((1-AL)*BL*(1-BL)/AL) - (1-A)*rho*np.sqrt(AL*BL*(1-BL)/(1-AL))
