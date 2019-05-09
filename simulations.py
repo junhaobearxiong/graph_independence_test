@@ -22,7 +22,7 @@ def rho_sbm_diff_block(rho, k, AL, BL, n=100):
 
     AL = symmetrize(AL)
     BL = symmetrize(BL)
-    A = sbm(k, AL)
+    A = sbm(k, AL, loops=True)
 
     AL_new = np.zeros_like(A)
     BL_new = np.zeros_like(A)
@@ -39,7 +39,7 @@ def rho_sbm_diff_block(rho, k, AL, BL, n=100):
     B = np.random.binomial(1, prob)
     B = B.astype(np.float64)
     B = symmetrize(B)
-    np.fill_diagonal(B, 0)
+    # np.fill_diagonal(B, 0)
     return A, B
 
 
@@ -141,13 +141,13 @@ def rho_ER_marg(rho, p, q, n=100):
     pvec = np.array([[p]])
     L = np.repeat(np.repeat(pvec, n, 0), n, 1)
 
-    A = sbm(nvec, pvec)
+    A = sbm(nvec, pvec, loops=True)
     prob = q + A*rho*np.sqrt((1-p)*q*(1-q)/p) - \
         (1-A)*rho*np.sqrt(p*q*(1-q)/(1-p))
     B = np.random.binomial(1, prob)
     B = B.astype(np.float64)
     B = symmetrize(B)
-    np.fill_diagonal(B, 0)
+    # np.fill_diagonal(B, 0)
     return A, B
 
 
@@ -237,7 +237,7 @@ def rho_sbm_marg(rho, k, AL, BL, n=100):
     B = np.random.binomial(1, prob)
     B = B.astype(np.float64)
     B = symmetrize(B)
-    np.fill_diagonal(B, 0)
+    # np.fill_diagonal(B, 0)
     return A, B
 
 
