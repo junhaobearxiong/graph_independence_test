@@ -12,6 +12,60 @@ from graspy.utils import symmetrize
 from mgcpy.independence_tests.mgc import MGC
 
 
+def dcorr_power_two_sided(indept_test, sim_func, mc=500, alpha=0.05, given_blocks=False, blocks=None, **kwargs):
+    # power for any test that builds on distance matrices
+    # can use dcorr / mgc
+    test_stat_null_array = np.zeros(mc)
+    test_stat_alt_array = np.zeros(mc)
+    for i in range(mc):
+        A, B = sim_func(**kwargs)
+        if given_blocks:
+            block_assignment = blocks
+        else:
+            block_assignment = estimate_block_assignment(A, B)
+        A_null = block_permute(A, block_assignment)
+        B_sorted = sort_graph(B, block_assignment)
+
+        test_stat_alt, _ = indept_test.test_statistic(
+            matrix_X=to_distance_mtx(A), matrix_Y=to_distance_mtx(B))
+        test_stat_null, _ = indept_test.test_statistic(
+            matrix_X=to_distance_mtx(A_null), matrix_Y=to_distance_mtx(B_sorted))
+
+        test_stat_alt_array[i] = test_stat_alt
+        test_stat_null_array[i] = test_stat_null
+    c1 = np.sort(test_stat_null_array)[math.floor(alpha/2*mc)]
+    c2 = np.sort(test_stat_null_array)[math.ceil((1-alpha/2)*mc)]
+    power = np.where((test_stat_alt_array > c2) | (test_stat_alt_array < c1))[0].shape[0] / mc
+    return power
+
+
+def pearson_power_two_sided(indept_test, sim_func, mc=500, alpha=0.05,
+                            given_blocks=False, blocks=None, **kwargs):
+    # power for any test that uses vectorized matrix as samples
+    test_stat_null_array = np.zeros(mc)
+    test_stat_alt_array = np.zeros(mc)
+    for i in range(mc):
+        A, B = sim_func(**kwargs)
+        if given_blocks:
+            block_assignment = blocks
+        else:
+            block_assignment = estimate_block_assignment(A, B)
+        A_null = block_permute(A, block_assignment)
+        B_sorted = sort_graph(B, block_assignment)
+
+        test_stat_alt, _ = indept_test.test_statistic(
+            matrix_X=triu_no_diag(A), matrix_Y=triu_no_diag(B))
+        test_stat_null, _ = indept_test.test_statistic(
+            matrix_X=triu_no_diag(A_null), matrix_Y=triu_no_diag(B_sorted))
+
+        test_stat_alt_array[i] = test_stat_alt
+        test_stat_null_array[i] = test_stat_null
+    c1 = np.sort(test_stat_null_array)[math.floor(alpha/2*mc)]
+    c2 = np.sort(test_stat_null_array)[math.ceil((1-alpha/2)*mc)]
+    power = np.where((test_stat_alt_array > c2) | (test_stat_alt_array < c1))[0].shape[0] / mc
+    return power
+
+
 def dcorr_power(indept_test, sim_func, mc=500, alpha=0.05,
                 given_blocks=False, blocks=None, **kwargs):
     # power for any test that builds on distance matrices
@@ -66,7 +120,7 @@ def pearson_power(indept_test, sim_func, mc=500, alpha=0.05,
     test_stat_alt_array = np.absolute(test_stat_alt_array)
     critical_value = np.sort(test_stat_null_array)[math.ceil((1-alpha)*mc)]
     power = np.where(test_stat_alt_array > critical_value)[0].shape[0] / mc
-    return power
+    return power, test_stat_null_array, test_stat_alt_array
 
 
 def to_kernel(A):
