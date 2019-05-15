@@ -8,10 +8,12 @@ import multiprocessing as mp
 
 from graspy.utils import is_symmetric
 
-from mgcpy.independence_tests.mgc.mgc import MGC
+from mgcpy.independence_tests.mgc import MGC
+from mgcpy.independence_tests.dcorr import DCorr
+from mgcpy.independence_tests.rv_corr import RVCorr
 
 from utils import estimate_block_assignment, block_permute, sort_graph, \
-    to_distance_mtx, identity, pvalue
+    to_distance_mtx, identity, pvalue, triu_no_diag
 
 
 def preprocess_csv(weighted):
@@ -45,15 +47,26 @@ def test_stats_parallel(inputs):
     gap = inputs[1]
     k = inputs[2]
     reps = inputs[3]
-    mgc = MGC(compute_distance_matrix=identity)
+    test_num = inputs[4]
+    if test_num == 0:
+        test = MGC(compute_distance_matrix=identity)
+    elif test_num == 1:
+        test = DCorr(compute_distance_matrix=identity)
+    elif test_num == 2:
+        test = RVCorr(which_test='pearson')
     test_stats_null_arr = np.zeros(reps)
     for r in tqdm(range(reps)):
         block_assignment = estimate_block_assignment(chem, gap,
                                                      k=k, set_k=True,
                                                      num_repeats=10)
-        test_stats_null, _ = mgc.test_statistic(
-            to_distance_mtx(block_permute(chem, block_assignment)),
-            to_distance_mtx(sort_graph(gap, block_assignment)))
+        if test_num == 0 or test_num == 1:
+            test_stats_null, _ = test.test_statistic(
+                to_distance_mtx(block_permute(chem, block_assignment)),
+                to_distance_mtx(sort_graph(gap, block_assignment)))
+        else:
+            test_stats_null, _ = test.test_statistic(
+                triu_no_diag(block_permute(chem, block_assignment)),
+                triu_no_diag(sort_graph(gap, block_assignment)))
         test_stats_null_arr[r] = test_stats_null
     print('finish k={}'.format(k))
     return (k, test_stats_null_arr)
@@ -62,19 +75,20 @@ def test_stats_parallel(inputs):
 def main(argv):
     reps = int(argv[0])
     weighted = bool(int(argv[1]))
+    test_num = int(argv[2])
 
     chem, gap = preprocess_csv(weighted)
     k_arr = np.logspace(start=1, stop=8, num=8, base=2, dtype=int)
 
-    inputs = [(chem, gap, k, reps) for k in k_arr]
+    inputs = [(chem, gap, k, reps, test_num) for k in k_arr]
 
     with mp.Pool(mp.cpu_count() - 1) as p:
         test_stats = p.map(test_stats_parallel, inputs)
 
     if weighted:
-        file_name = 'results/celegans_chem_gap_weighted_teststats_null.pkl'
+        file_name = 'results/celegans_chem_gap_weighted_teststats_null_{}.pkl'.format(test_num)
     else:
-        file_name = 'results/celegans_chem_gap_unweighted_teststats_null.pkl'
+        file_name = 'results/celegans_chem_gap_unweighted_teststats_null_{}.pkl'.format(test_num)
 
     with open(file_name, 'wb') as f:
         pickle.dump(test_stats, f)
