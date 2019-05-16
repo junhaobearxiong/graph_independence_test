@@ -4,6 +4,31 @@ from graspy.utils import symmetrize, is_symmetric
 from utils import non_diagonal
 
 
+def rho_gaussian_sbm(rho, k, AL, BL, n, var_x=1, var_y=1):
+    if sum(k) != n:
+        raise ValueError('the total number of vertices in each community \
+        should equal n')
+    sigma = np.array([[var_x, rho], [rho, var_y]])
+    AL = symmetrize(AL)
+    BL = symmetrize(BL)
+    A = np.zeros((n, n))
+    B = np.zeros((n, n))
+    block_indices = np.insert(np.cumsum(k), 0, 0)
+
+    for i in range(AL.shape[0]):
+        for j in range(AL.shape[1]):
+            mu_x = AL[i, j]
+            mu_y = BL[i, j]
+            sample = np.random.multivariate_normal([mu_x, mu_y], sigma,
+                                                   size=(block_indices[i+1]-block_indices[i],
+                                                         block_indices[j+1]-block_indices[j]))
+            A[block_indices[i]:block_indices[i+1],
+              block_indices[j]:block_indices[j+1]] = sample[:, :, 0]
+            B[block_indices[i]:block_indices[i+1],
+              block_indices[j]:block_indices[j+1]] = sample[:, :, 1]
+    return A, B
+
+
 def rho_sbm_diff_block(rho, k, AL, BL, n=100):
     if sum(k) != n:
         raise ValueError('the total number of vertices in each community \
