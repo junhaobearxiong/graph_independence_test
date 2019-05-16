@@ -12,10 +12,11 @@ from mgcpy.independence_tests.dcorr import DCorr
 from mgcpy.independence_tests.rv_corr import RVCorr
 from mgcpy.independence_tests.mgc import MGC
 
-from simulations import sbm_corr, ER_corr
+from simulations import sbm_corr, ER_corr, rho_gaussian_sbm
 from utils import triu_no_diag, to_distance_mtx, identity, sbm_params, dcorr_power_two_sided, pearson_power_two_sided
 
 import multiprocessing as mp
+import sys
 
 
 def power_parallel(inputs):
@@ -45,7 +46,6 @@ def power_parallel(inputs):
         test_power = dcorr_power_two_sided(test, rho_gaussian_sbm,
                                            given_blocks=True, blocks=block_assignments,
                                            rho=rho, AL=P1, BL=P2, k=block_sizes, n=n, mc=nmc)
-
     elif name == 'mgc':
         test = MGC(compute_distance_matrix=identity)
         test_power = dcorr_power_two_sided(test, rho_gaussian_sbm,

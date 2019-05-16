@@ -26,6 +26,8 @@ def rho_gaussian_sbm(rho, k, AL, BL, n, var_x=1, var_y=1):
               block_indices[j]:block_indices[j+1]] = sample[:, :, 0]
             B[block_indices[i]:block_indices[i+1],
               block_indices[j]:block_indices[j+1]] = sample[:, :, 1]
+    A = symmetrize(A)
+    B = symmetrize(B)
     return A, B
 
 
