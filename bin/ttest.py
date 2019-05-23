@@ -33,6 +33,20 @@ def dcorr_ttest_power(sim_func, mc=500, alpha=0.05, **kwargs):
     return power
 
 
+def ttest_power(sim_func, mc=500, alpha=0.05, **kwargs):
+    # power for any test that builds on distance matrices
+    # can use dcorr / mgc
+    pval_array = np.zeros(mc)
+    for i in range(mc):
+        A, B = sim_func(**kwargs)
+        test = RVCorr(which_test='pearson')
+        pval, _ = test.p_value(
+            matrix_X=triu_no_diag(A), matrix_Y=triu_no_diag(B))
+        pval_array[i] = pval
+    power = np.where(pval_array < alpha)[0].shape[0] / mc
+    return power
+
+
 def power_parallel(inputs):
     rho = inputs[0]
     n = inputs[1]
@@ -41,13 +55,12 @@ def power_parallel(inputs):
     nmc = inputs[4]
     graph_type = inputs[5]
 
-    dcorr = DCorr()
     if graph_type == 'er' or graph_type == 'er_marg':
-        test_power = dcorr_ttest_power(rho_ER_marg,
-                                       rho=rho, p=P1, q=P2, n=n, mc=nmc)
+        test_power = ttest_power(rho_ER_marg,
+                                 rho=rho, p=P1, q=P2, n=n, mc=nmc)
     else:
-        test_power = dcorr_ttest_power(rho_sbm_marg,
-                                       rho=rho, AL=P1, BL=P2, k=k, n=n, mc=nmc)
+        test_power = ttest_power(rho_sbm_marg,
+                                 rho=rho, AL=P1, BL=P2, k=2, n=n, mc=nmc)
     print('finish for rho={}, n={}'.format(rho, n))
     return rho, n, test_power
 
@@ -64,7 +77,7 @@ def fill_inputs(nmc, graph_type):
         P2 = 0.2
     elif graph_type == 'sbm':
         P1 = sbm_params(a=0.7, b=0.3)
-        P2 = sbm_params(a=0.2, b=0.5)
+        P2 = sbm_params(a=0.7, b=0.3)
     elif graph_type == 'sbm_marg':
         P1 = sbm_params(a=0.7, b=0.3)
         P2 = sbm_params(a=0.2, b=0.5)
@@ -82,7 +95,7 @@ def main(argv):
 
     with mp.Pool(mp.cpu_count() - 1) as p:
         results = p.map(power_parallel, inputs)
-    with open('results/rho_{}_power_parallel_ttest.pkl'.format(graph_type), 'wb') as f:
+    with open('results/rho_{}_power_parallel_pearson_ttest.pkl'.format(graph_type), 'wb') as f:
         pickle.dump(results, f)
 
 
