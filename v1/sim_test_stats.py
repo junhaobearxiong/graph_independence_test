@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import matplotlib.pyplot as plt
 
 from simulations import rho_sbm
 from utils import triu_no_diag, to_distance_mtx
@@ -15,8 +16,35 @@ params = {
 		'P2': np.array([[0.5]]),
 		'nmc': 500,
 		'rho_arr': np.around(np.linspace(-0.4, 0.9, 14), 1)
+	},
+	'er_marg': {
+		'n': 100,
+		'k': [100],
+		'P1': np.array([[0.7]]),
+		'P2': np.array([[0.2]]),
+		'nmc': 500,
+		'rho_arr': np.around(np.linspace(-0.4, 0.3, 8), 1)
+	},
+	'sbm': {
+		'n': 100,
+		'k': [50, 50],
+		'P1': np.array([[0.7, 0.3], [0.3, 0.7]]),
+		'P2': np.array([[0.7, 0.3], [0.3, 0.7]]),
+		'nmc': 500,
+		'rho_arr': np.around(np.linspace(-0.3, 0.9, 14), 1)
+	},
+	'sbm_marg': {
+		'n': 100,
+		'k': [50, 50],
+		'P1': np.array([[0.7, 0.3], [0.3, 0.7]]),
+		'P2': np.array([[0.2, 0.5], [0.5, 0.2]]),
+		'nmc': 500,
+		'rho_arr': np.around(np.linspace(-0.6, 0.3, 10), 1)
 	}
 }
+
+with open('results/sim_test_stats_params.pkl', 'wb') as f:
+	pickle.dump(params, f)
 
 def get_test_stats(param):
 	result = {
