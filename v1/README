@@ -1,0 +1,6 @@
+# Setup
+
+To activate the environment, type:
+```
+. env/bin/activate
+```
