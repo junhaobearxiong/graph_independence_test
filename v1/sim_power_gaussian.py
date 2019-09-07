@@ -57,6 +57,10 @@ def get_power(inputs):
         test = DCorr()
         test_power = dcorr_power(test, rho_gaussian_sbm, given_blocks=True, blocks=blocks,
             rho=rho, n=n, k=k, AL=P1, BL=P2)
+    elif test_name = 'mgc':
+        test = MGC()
+        test_power = dcorr_power(test, rho_gaussian_sbm, given_blocks=True, blocks=blocks,
+            rho=rho, n=n, k=k, AL=P1, BL=P2)        
     print('finish {}, {} for rho={}, n={}'.format(graph, test_name, rho, n))
     return graph, test_name, rho, n, test_power
 

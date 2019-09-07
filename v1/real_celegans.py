@@ -12,8 +12,7 @@ from mgcpy.independence_tests.mgc import MGC
 from mgcpy.independence_tests.dcorr import DCorr
 from scipy.stats import pearsonr
 
-from utils import estimate_block_assignment, block_permute, sort_graph, \
-    to_distance_mtx, identity, triu_no_diag
+from utils import estimate_block_assignment, block_permute, sort_graph, to_distance_mtx, triu_no_diag
 
 
 def preprocess_csv(weighted):
@@ -41,10 +40,12 @@ def preprocess_csv(weighted):
         gap_uw = np.where(gap > 0, 1, 0).astype(float)
         return chem_uw, gap_uw
 
+
 def edge_density(graph):
     num_edges = np.where(graph > 0)[0].size
     total = graph.shape[0] * graph.shape[1]
     return num_edges / total
+
 
 def test_stats_parallel(inputs):
     chem = inputs[0]
@@ -53,22 +54,18 @@ def test_stats_parallel(inputs):
     reps = inputs[3]
     test_num = inputs[4]
     if test_num == 0:
-        test = MGC(compute_distance_matrix=identity)
+        test = MGC()
     elif test_num == 1:
-        test = DCorr(compute_distance_matrix=identity)
-    elif test_num == 2:
-        test = RVCorr(which_test='pearson')
+        test = DCorr()
     test_stats_null_arr = np.zeros(reps)
     for r in tqdm(range(reps)):
-        block_assignment = estimate_block_assignment(chem, gap,
-                                                     k=k, set_k=True,
-                                                     num_repeats=10)
+        block_assignment = estimate_block_assignment(chem, gap, k=k, set_k=True, num_repeats=10)
         if test_num == 0 or test_num == 1:
             test_stats_null, _ = test.test_statistic(
                 to_distance_mtx(block_permute(chem, block_assignment)),
                 to_distance_mtx(sort_graph(gap, block_assignment)))
         else:
-            test_stats_null, _ = test.test_statistic(
+            test_stats_null, _ = pearsonr(
                 triu_no_diag(block_permute(chem, block_assignment)),
                 triu_no_diag(sort_graph(gap, block_assignment)))
         test_stats_null_arr[r] = test_stats_null
@@ -89,10 +86,11 @@ def main(argv):
     with mp.Pool(mp.cpu_count() - 1) as p:
         test_stats = p.map(test_stats_parallel, inputs)
 
+    tests = ['mgc', 'dcorr', 'pearson']
     if weighted:
-        file_name = 'results/celegans_chem_gap_weighted_teststats_null_{}.pkl'.format(test_num)
+        file_name = 'results/celegans_chem_gap_teststats_null_weighted_{}.pkl'.format(tests[test_num])
     else:
-        file_name = 'results/celegans_chem_gap_unweighted_teststats_null_{}.pkl'.format(test_num)
+        file_name = 'results/celegans_chem_gap_teststats_null_unweighted_{}.pkl'.format(tests[test_num])
 
     with open(file_name, 'wb') as f:
         pickle.dump(test_stats, f)

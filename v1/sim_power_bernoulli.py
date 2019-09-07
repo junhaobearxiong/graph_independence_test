@@ -91,7 +91,5 @@ for sim_name, param in params.items():
 	output[sim_name] = get_power(sim_name, param)
 	print('finish {}'.format(sim_name))
 
-print(output)
-
 with open('results/sim_power_bernoulli.pkl', 'wb') as f:
 	pickle.dump(output, f)
