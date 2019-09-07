@@ -1,6 +1,5 @@
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 
 from simulations import rho_sbm
 from utils import triu_no_diag, to_distance_mtx

@@ -1,6 +1,5 @@
 data/
 results/
-figures/
 
 # Jupyter Notebook
 .ipynb_checkpoints

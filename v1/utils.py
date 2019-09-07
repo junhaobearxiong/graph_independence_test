@@ -9,10 +9,20 @@ from graspy.embed import MultipleASE
 from graspy.cluster import GaussianCluster, KMeansCluster
 from graspy.utils import symmetrize
 
-# from mgcpy.independence_tests.mgc import MGC
+from scipy.stats import pearsonr
 
 
-def dcorr_power_two_sided(indept_test, sim_func, mc=500, alpha=0.05, given_blocks=False, blocks=None, **kwargs):
+def ttest_power(sim_func, mc=500, alpha=0.05, **kwargs):
+    pval_array = np.zeros(mc)
+    for i in range(mc):
+        A, B = sim_func(**kwargs)
+        _, pval = pearsonr(triu_no_diag(A), triu_no_diag(B))
+        pval_array[i] = pval
+    power = np.where(pval_array < alpha)[0].shape[0] / mc
+    return power
+
+
+def dcorr_power(indept_test, sim_func, mc=500, alpha=0.05, given_blocks=False, blocks=None, **kwargs):
     # power for any test that builds on distance matrices
     # can use dcorr / mgc
     test_stat_null_array = np.zeros(mc)
@@ -39,9 +49,8 @@ def dcorr_power_two_sided(indept_test, sim_func, mc=500, alpha=0.05, given_block
     return power
 
 
-def pearson_power_two_sided(indept_test, sim_func, mc=500, alpha=0.05,
-                            given_blocks=False, blocks=None, **kwargs):
-    # power for any test that uses vectorized matrix as samples
+def pearson_power(sim_func, mc=500, alpha=0.05, given_blocks=False, blocks=None, **kwargs):
+    # power for pearson, uses vectorized matrix as samples
     test_stat_null_array = np.zeros(mc)
     test_stat_alt_array = np.zeros(mc)
     for i in range(mc):
@@ -53,10 +62,8 @@ def pearson_power_two_sided(indept_test, sim_func, mc=500, alpha=0.05,
         A_null = block_permute(A, block_assignment)
         B_sorted = sort_graph(B, block_assignment)
 
-        test_stat_alt, _ = indept_test.test_statistic(
-            matrix_X=triu_no_diag(A), matrix_Y=triu_no_diag(B))
-        test_stat_null, _ = indept_test.test_statistic(
-            matrix_X=triu_no_diag(A_null), matrix_Y=triu_no_diag(B_sorted))
+        test_stat_alt, _ = pearsonr(triu_no_diag(A), triu_no_diag(B))
+        test_stat_null, _ = pearsonr(triu_no_diag(A_null), triu_no_diag(B_sorted))
 
         test_stat_alt_array[i] = test_stat_alt
         test_stat_null_array[i] = test_stat_null
