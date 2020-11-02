@@ -13,8 +13,9 @@ The ultimate goal is to merge this work into `graspologic` under the `inference`
 Below is a rough working plan
 1. Implement correlated sbm with different marginals, based on the correlated sbm implementation in `graspologic`. Check correlation based on unit tests. Test should be ER and SBM, both with same & different marginals, SBM with different block sizes
 2. Implement the new test statistic: `gcorr`
-3. Implement test statistic simulation (figure 2): test statistic vs. true correlation. same 4 tests as below. For figure, just show ER & SBM w/ different marginals.
-4. Implement power simulation (figure 3): exact pearson, pearson with vertex permutation, pearson with block permutation, gcorr with block permutation
+3. Implement test statistic simulation (figure 2): test statistic vs. true correlation. pearson vs. gcorr. For figure, just show ER & SBM w/ different marginals.
+4. Implement power simulation (figure 3): exact pearson, pearson with block permutation, gcorr with vertex permutation, gcorr with block permutation
+5. Implement block estimation to get vertex assignments, repeat simulations
 
 After I have a working code base based on the new test, I should think about how to address some of the comments in the nips reviews
 1. The assumption that the 2 graphs share the same community structure might be too strong. In that case, it makes sense as long as we account for the block structure, we can ignore the graph structure and do something like pearson e.g. gcorr. Although I feel like it would be a different problem (e.g. unconditional independence) if we are not making this assumption, since in that case, the fact that the 2 graphs share some community structure is indicative of dependence, whereas in our case we are finding correlation **given** the community structure, which is only going to be edge correlations. Maybe in that case we are testing if the joint are independent: (A, ZA) vs. (B, ZB)

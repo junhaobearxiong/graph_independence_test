@@ -12,19 +12,41 @@ def get_highest_r(p, q):
 
 
 def check_r_er(p, q, r):
-    if r < get_lowest_r(p, q):
-        raise ValueError("r is lower than what p and q allows")
-    if r > get_highest_r(p, q):
-        raise ValueError("r is higher than what p and q allows")
+    low_r = get_lowest_r(p, q)
+    high_r = get_highest_r(p, q)
+    if r < low_r:
+        raise ValueError("r is lower than the lowest r allowed by p and q: {:.2f}".format(low_r))
+    if r > high_r:
+        raise ValueError("r is higher than the highest r allowed by p and q: {:.2f}".format(high_r))
+
+
+def get_lowest_r_sbm(p, q):
+    r = -1
+    for i in range(np.array(p).shape[0]):
+        for j in range(np.array(p).shape[1]):
+            low_r = get_lowest_r(p[i][j], q[i][j])
+            if r < low_r:
+                r = low_r
+    return r
+
+
+def get_highest_r_sbm(p, q):
+    r = 1
+    for i in range(np.array(p).shape[0]):
+        for j in range(np.array(p).shape[1]):
+            high_r = get_highest_r(p[i][j], q[i][j])
+            if r > high_r:
+                r = high_r
+    return r
 
 
 def check_r_sbm(p, q, r):
-    for i in range(np.array(p).shape[0]):
-        for j in range(np.array(p).shape[1]):
-            if r < get_lowest_r(p[i][j], q[i][j]):
-                raise ValueError("r is lower than what p and q allows")
-            if r > get_highest_r(p[i][j], q[i][j]):
-                raise ValueError("r is higher than what p and q allows")
+    low_r = get_lowest_r_sbm(p, q)
+    high_r = get_highest_r_sbm(p, q)
+    if r < low_r:
+        raise ValueError("r is lower than the lowest r allowed by p and q: {:.2f}".format(low_r))
+    if r > high_r:
+        raise ValueError("r is higher than the highest r allowed by p and q: {:.2f}".format(high_r))
                 
 
 def sample_edges_corr_diffmarg(P, Q, R, directed=False, loops=False):
