@@ -1,6 +1,11 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('sim', help='`bern` or `gauss`')
+args = parser.parse_args()
 
 def plot_power_curve(result, ax):
     x = np.linspace(10, 100, 10, dtype=int)
@@ -20,7 +25,7 @@ settings = [
 
 for i, r in enumerate(rho):
     for j, s in enumerate(settings):
-        with open('outputs/sim_power_bernoulli_{}_r{}.pkl'.format(s, r), 'rb') as f:
+        with open('outputs/sim_power_{}_{}_r{}.pkl'.format(args.sim, s, r), 'rb') as f:
             result = pickle.load(f)
             plot_power_curve(result, axs[i, j])
 
@@ -47,4 +52,10 @@ plt.xlabel('number of vertices')
 plt.ylabel('power')
 axs[0, 0].legend()
 
-plt.savefig('figures/sim_power_bernoulli.png')
+height = 1
+if args.sim == 'bern':
+    fig.suptitle('Power on Correlated Bernoulli Graphs', fontsize=label_size, y=height)
+else:
+    fig.suptitle('Power on Correlated Gaussian Graphs', fontsize=label_size, y=height)
+
+plt.savefig('figures/sim_power_{}.png'.format(args.sim))
