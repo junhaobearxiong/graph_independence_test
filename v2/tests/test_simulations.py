@@ -2,7 +2,8 @@ import pytest
 import numpy as np
 from simulations import (
     er_corr_diffmarg,
-    sbm_corr_diffmarg
+    sbm_corr_diffmarg,
+    er_corr_weighted,
 )
 
 def test_er_corr():
@@ -81,7 +82,31 @@ def test_sbm_corr():
     assert g1.shape == (np.sum(n), np.sum(n))
     assert g2.shape == (np.sum(n), np.sum(n))
 
+
+def test_er_corr_weighted():
+    n = 200
+    mu1 = 2
+    mu2 = 0
+    Sigma = [[1, 0.2], [0.2, 1]]
+    with pytest.raises(ValueError):
+        er_corr_weighted(n, [2], [0], Sigma)
+    with pytest.raises(ValueError):
+        er_corr_weighted(n, mu1, mu2, [[1, 0.2, 0], [0, 0.2, 1]])
+
+    g1, g2 = er_corr_weighted(n, mu1, mu2, Sigma)
+    assert np.allclose(g1, g1.T)
+    assert np.allclose(g2, g2.T)
+    assert np.allclose(np.diag(g1), 0)
+    assert np.allclose(np.diag(g2), 0)
+    assert np.isclose(g1.sum() / n / (n - 1), mu1, atol=0.02)
+    assert np.isclose(g2.sum() / n / (n - 1), mu2, atol=0.02)
+    Sigmahat = np.corrcoef(g1.flatten(), g2.flatten())
+    assert np.isclose(Sigmahat[0][0], Sigma[0][0], atol=0.02)
+    assert np.isclose(Sigmahat[0][1], Sigma[0][1], atol=0.02)
+    assert np.isclose(Sigmahat[1][1], Sigma[1][1], atol=0.02)
+
 def main():
+    test_er_corr_weighted()
     test_er_corr()
     test_sbm_corr()
 

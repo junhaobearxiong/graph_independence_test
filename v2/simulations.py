@@ -1,6 +1,7 @@
 import numpy as np
 from graspologic.simulations import sample_edges
 from graspologic.simulations.simulations_corr import check_dirloop, check_r
+from graspologic.utils import symmetrize
 
 
 def get_lowest_r(p, q):
@@ -276,3 +277,50 @@ def sbm_corr_diffmarg(n, p, q, r, directed=False, loops=False):
     G1, G2 = sample_edges_corr_diffmarg(P, Q, R, directed=directed, loops=loops)
     return G1, G2
 
+
+def er_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
+    """
+    Generate a pair of correlated graphs with the bivariate normal distribution.
+    Both G1 and G2 are non-binary matrices.
+    Every pair of edges is distributed as a bivariate normal, with mean = [mu1, mu2]
+    and covariance matrix Sigma
+    The correlation between G1 and G2 is Sigma12 / sqrt(Sigma11 * Sigma22)
+    Parameters
+    ----------
+    n: int
+       Number of vertices
+    mu1: float
+        The mean of the edge weights of G1 (analogous the marginal probability p in correlated Bernoulli graph)
+    mu2: float
+        The mean of the edge weights of G2 (analogous the marginal probability q in correlated Bernoulli graph)
+    Sigma: list or ndarray (2, 2)
+        The covariance matrix encoding the variances of the edge weights of G1, G2
+        and the covariance beteween them
+    Returns
+    -------
+    G1: ndarray (n_vertices, n_vertices)
+        Adjacency matrix the same size as P representing a random graph.
+    G2: ndarray (n_vertices, n_vertices)
+        Adjacency matrix the same size as P representing a random graph.
+    """
+    if not np.issubdtype(type(mu1), np.floating) and not np.issubdtype(type(mu1), np.integer):
+        raise ValueError("mu1 is not of type int or float")
+
+    if not np.issubdtype(type(mu2), np.floating) and not np.issubdtype(type(mu2), np.integer):
+        raise ValueError("mu2 is not of type int or float")
+
+    if not isinstance(Sigma, (list, np.ndarray)):
+        raise ValueError("Sigma must be list or np.ndarray")
+    if np.array(Sigma).shape != (2, 2):
+        raise ValueError("Sigma must have shape (2, 2)")
+
+    sample = np.random.multivariate_normal([mu1, mu2], Sigma, size=(n, n))
+    G1 = sample[..., 0]
+    G2 = sample[..., 1]
+    if not directed:
+        G1 = symmetrize(G1, method="triu")
+        G2 = symmetrize(G2, method="triu")
+    if not loops:
+        G1 = G1 - np.diag(np.diag(G1))
+        G2 = G2 - np.diag(np.diag(G2))
+    return G1, G2
