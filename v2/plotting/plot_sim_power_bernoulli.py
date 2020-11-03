@@ -14,8 +14,8 @@ rho = [0.0, 0.1, -0.1]
 settings = [
     'er',
     'sbm_diffmarg',
-    'sbm_diffblock'
-
+    'sbm_diffblock',
+    'sbm_estblock'
 ]
 
 for i, r in enumerate(rho):

@@ -5,7 +5,7 @@ import argparse
 from graspologic.simulations.simulations_corr import er_corr, sbm_corr
 
 from simulations import er_corr_diffmarg, sbm_corr_diffmarg
-from core import gcorr, block_permutation
+from core import gcorr, block_permutation, community_estimation
 from utils import pearson_graph, vertex_permutation, power_estimation, pearson_exact_pvalue
 
 parser = argparse.ArgumentParser()
@@ -55,7 +55,6 @@ for i in range(num_vertices.size):
             Z = np.repeat([0, 1], n) 
         elif setting == 'sbm_estblock':
             n = [int(num_vertices[i] * 0.7), int(num_vertices[i] * 0.3)]
-            # TODO: add the code to estimate block assignment here
         else:
             n = num_vertices[i]
             Z = np.repeat([0], n)
@@ -65,6 +64,9 @@ for i in range(num_vertices.size):
             G1, G2 = sbm_corr_diffmarg(n, p, q, r)
         else:
             G1, G2 = er_corr_diffmarg(n, p, q, r)
+
+        if setting == 'sbm_estblock':
+            Z = community_estimation(G1, G2, min_components=5)
 
         G2_vertex_perm = vertex_permutation(G2)
         G2_block_perm = block_permutation(G2, Z)
