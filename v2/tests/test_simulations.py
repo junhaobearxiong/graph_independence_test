@@ -4,6 +4,7 @@ from simulations import (
     er_corr_diffmarg,
     sbm_corr_diffmarg,
     er_corr_weighted,
+    sbm_corr_weighted
 )
 
 def test_er_corr():
@@ -105,7 +106,47 @@ def test_er_corr_weighted():
     assert np.isclose(Sigmahat[0][1], Sigma[0][1], atol=0.02)
     assert np.isclose(Sigmahat[1][1], Sigma[1][1], atol=0.02)
 
+
+def test_sbm_corr_weighted():
+    n = [400, 600]
+    mu1 = [[2, 0], [0, 2]]
+    mu2 = [[4, 2], [2, 4]]
+    Sigma = [[1, 0.2], [0.2, 1]]
+    G1, G2 = sbm_corr_weighted(n, mu1, mu2, Sigma)
+
+    # check undirected and no loops
+    assert np.allclose(G1, G1.T)
+    assert np.allclose(G2, G2.T)
+    assert np.allclose(np.diag(G1), 0)
+    assert np.allclose(np.diag(G2), 0)
+
+    # check mean and covariance of each block
+    block_indices = np.insert(np.cumsum(np.array(n)), 0, 0)
+    for i in range(np.array(n).size):
+        for j in range(np.array(n).size):
+            g1 = G1[
+                block_indices[i] : block_indices[i + 1],
+                block_indices[j] : block_indices[j + 1],
+            ]
+            g2 = G2[
+                block_indices[i] : block_indices[i + 1],
+                block_indices[j] : block_indices[j + 1],                
+            ]
+            # ignore the diagonals
+            if i == j:
+                num_vertices = n[i] * (n[i] - 1)
+            else:
+                num_vertices = n[i] * n[j]
+            assert np.isclose(g1.sum() / num_vertices, mu1[i][j], atol=0.02)
+            assert np.isclose(g2.sum() / num_vertices, mu2[i][j], atol=0.02)
+            Sigmahat = np.corrcoef(g1.flatten(), g2.flatten())
+            assert np.isclose(Sigmahat[0][0], Sigma[0][0], atol=0.02)
+            assert np.isclose(Sigmahat[0][1], Sigma[0][1], atol=0.02)
+            assert np.isclose(Sigmahat[1][1], Sigma[1][1], atol=0.02)
+
+
 def main():
+    test_sbm_corr_weighted()
     test_er_corr_weighted()
     test_er_corr()
     test_sbm_corr()

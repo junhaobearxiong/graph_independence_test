@@ -278,6 +278,49 @@ def sbm_corr_diffmarg(n, p, q, r, directed=False, loops=False):
     return G1, G2
 
 
+def sample_edges_corr_weighted(shape, mu1, mu2, Sigma):
+    """
+    Generate a pair of correlated matrices with the bivariate normal distribution.
+    Both G1 and G2 are non-binary matrices.
+    Every pair of entries is distributed as a bivariate normal, with mean = [mu1, mu2]
+    and covariance matrix Sigma
+    The correlation between G1 and G2 is Sigma12 / sqrt(Sigma11 * Sigma22)
+    Parameters
+    ----------
+    shape: tuple
+        The shape of the output matrices: shape[0] denotes the number of rows, shape[1] the columns
+    mu1: float
+        The mean of the edge weights of G1 (analogous the marginal probability p in correlated Bernoulli graph)
+    mu2: float
+        The mean of the edge weights of G2 (analogous the marginal probability q in correlated Bernoulli graph)
+    Sigma: list or ndarray (2, 2)
+        The covariance matrix encoding the variances of the edge weights of G1, G2
+        and the covariance beteween them
+    Returns
+    -------
+    G1: ndarray (shape)
+    G2: ndarray (shape)
+    """
+    if not isinstance(shape, tuple) or len(shape) != 2:
+        raise ValueError("shape must be a tuple of length 2")
+
+    if not np.issubdtype(type(mu1), np.floating) and not np.issubdtype(type(mu1), np.integer):
+        raise ValueError("mu1 is not of type int or float")
+
+    if not np.issubdtype(type(mu2), np.floating) and not np.issubdtype(type(mu2), np.integer):
+        raise ValueError("mu2 is not of type int or float")
+
+    if not isinstance(Sigma, (list, np.ndarray)):
+        raise ValueError("Sigma must be list or np.ndarray")
+    if np.array(Sigma).shape != (2, 2):
+        raise ValueError("Sigma must have shape (2, 2)")
+
+    sample = np.random.multivariate_normal([mu1, mu2], Sigma, size=shape)
+    G1 = sample[..., 0]
+    G2 = sample[..., 1]
+    return G1, G2
+
+
 def er_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
     """
     Generate a pair of correlated graphs with the bivariate normal distribution.
@@ -299,24 +342,11 @@ def er_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
     Returns
     -------
     G1: ndarray (n_vertices, n_vertices)
-        Adjacency matrix the same size as P representing a random graph.
+        Adjacency matrix representing a random graph.
     G2: ndarray (n_vertices, n_vertices)
-        Adjacency matrix the same size as P representing a random graph.
+        Adjacency matrix representing a random graph.
     """
-    if not np.issubdtype(type(mu1), np.floating) and not np.issubdtype(type(mu1), np.integer):
-        raise ValueError("mu1 is not of type int or float")
-
-    if not np.issubdtype(type(mu2), np.floating) and not np.issubdtype(type(mu2), np.integer):
-        raise ValueError("mu2 is not of type int or float")
-
-    if not isinstance(Sigma, (list, np.ndarray)):
-        raise ValueError("Sigma must be list or np.ndarray")
-    if np.array(Sigma).shape != (2, 2):
-        raise ValueError("Sigma must have shape (2, 2)")
-
-    sample = np.random.multivariate_normal([mu1, mu2], Sigma, size=(n, n))
-    G1 = sample[..., 0]
-    G2 = sample[..., 1]
+    G1, G2 = sample_edges_corr_weighted((n, n), mu1, mu2, Sigma)
     if not directed:
         G1 = symmetrize(G1, method="triu")
         G2 = symmetrize(G2, method="triu")
@@ -324,3 +354,44 @@ def er_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
         G1 = G1 - np.diag(np.diag(G1))
         G2 = G2 - np.diag(np.diag(G2))
     return G1, G2
+
+
+def sbm_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
+    """
+    Parameters
+    ----------
+    n: list of int, shape (n_communities)
+        Number of vertices in each community. Communities are assigned n[0], n[1], ...
+    mu1: array-like, shape (n_communities, n_communities)
+        Mean of the edge weight between each of the communities in the first graph, where mu1[i, j] indicates
+        the mean of the edge weights of edges in communities [i, j].
+    mu2: array-like, shape (n_communities, n_communities)
+        same as mu1, but for the second graph
+    Sigma: list or ndarray (2, 2)
+        The covariance matrix encoding the variances of the edge weights of G1, G2
+        and the covariance beteween them. 
+        Right now we are forcing the entire graph to have the same variance and covariance
+    """
+    n = np.array(n)
+    G1 = np.zeros((np.sum(n), np.sum(n)))
+    G2 = np.zeros((np.sum(n), np.sum(n)))
+    block_indices = np.insert(np.cumsum(np.array(n)), 0, 0)
+    for i in range(n.size):  # for each row
+        for j in range(n.size):  # for each column
+            g1, g2 = sample_edges_corr_weighted((n[i], n[j]), mu1[i][j], mu2[i][j], Sigma)
+            G1[
+                block_indices[i] : block_indices[i + 1],
+                block_indices[j] : block_indices[j + 1],
+            ] = g1
+            G2[
+                block_indices[i] : block_indices[i + 1],
+                block_indices[j] : block_indices[j + 1],                
+            ] = g2
+    if not directed:
+        G1 = symmetrize(G1, method="triu")
+        G2 = symmetrize(G2, method="triu")
+    if not loops:
+        G1 = G1 - np.diag(np.diag(G1))
+        G2 = G2 - np.diag(np.diag(G2))
+    return G1, G2
+
