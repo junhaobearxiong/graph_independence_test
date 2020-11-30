@@ -2,9 +2,7 @@ import numpy as np
 import pickle
 from simulations import *
 from core import (
-    gcorr
-)
-from utils import (
+    gcorr,
     pearson_graph
 )
 import argparse

@@ -5,8 +5,7 @@ import argparse
 from graspologic.simulations.simulations_corr import er_corr, sbm_corr
 
 from simulations import er_corr_diffmarg, sbm_corr_diffmarg, er_corr_weighted, sbm_corr_weighted
-from core import gcorr, block_permutation, community_estimation
-from utils import pearson_graph, vertex_permutation, power_estimation, pearson_exact_pvalue
+from core import gcorr, block_permutation, community_estimation, pearson_graph, vertex_permutation, power_estimation, pearson_exact_pvalue
 
 parser = argparse.ArgumentParser()
 parser.add_argument("sim", help="which simulation to run: `bern` or `gauss`")

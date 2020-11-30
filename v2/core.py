@@ -1,8 +1,11 @@
 import numpy as np
+import math
+from scipy.stats import pearsonr
 from graspologic.utils import symmetrize
-from graspologic.embed.mase import MultipleASE
+from graspologic.embed import AdjacencySpectralEmbed, MultipleASE
 # from graspologic.cluster.gclust import GaussianCluster
 from sklearn.mixture import GaussianMixture
+from utils import off_diag
 
 
 def gcorr(G1, G2, Z):
@@ -33,6 +36,7 @@ def gcorr(G1, G2, Z):
     Phat = np.zeros_like(G1)
     Qhat = np.zeros_like(G2)
     communities, num_nodes_in_communities = np.unique(Z, return_counts=True)
+
     # iterate over all combinations of communities (instead of just the lower/upper triangular)
     # because the community assignments can be in arbitrary order
     # the resulting matrix should still be symmetric because whenever you swap i and j you get the same answer
@@ -43,19 +47,27 @@ def gcorr(G1, G2, Z):
             else:
                 num_nodes = num_nodes_in_communities[i] * num_nodes_in_communities[j]
             block_idx = np.ix_(Z == i, Z == j)
-            p = np.sum(G1[block_idx]) / num_nodes
-            q = np.sum(G2[block_idx]) / num_nodes
-            Phat[block_idx] = p
-            Qhat[block_idx] = q
+            if num_nodes == 0:
+                # some block might only have one node, as a result of the calculation above, num_nodes would be 0
+                # since we are ignoring the diagonal entries in the correlation anyway
+                # we can set those probabilities arbitrarily
+                Phat[block_idx] = 0
+                Qhat[block_idx] = 0
+            else:
+                p = np.sum(G1[block_idx]) / num_nodes
+                q = np.sum(G2[block_idx]) / num_nodes
+                Phat[block_idx] = p
+                Qhat[block_idx] = q
+
     # since the diagonal entries are forced to be zeros in graphs with no loops
     # we should ignore them in the calculation of correlation 
-    # we do this by setting them to be the same as the diagonals of the`Phat` and `Qhat` matrix
-    diag_idx = np.diag_indices(G1.shape[0])
-    G1[diag_idx] = Phat[diag_idx]
-    G2[diag_idx] = Qhat[diag_idx]
+    g1 = off_diag(G1)
+    g2 = off_diag(G2)
+    phat = off_diag(Phat)
+    qhat = off_diag(Qhat)
 
     # calculate the test statistic
-    T = np.sum((G1 - Phat) * (G2 - Qhat)) / np.sqrt(np.sum(np.square(G1 - Phat)) * np.sum(np.square(G2 - Qhat)))
+    T = np.sum((g1 - phat) * (g2 - qhat)) / np.sqrt(np.sum(np.square(g1 - phat)) * np.sum(np.square(g2 - qhat)))
     return T
 
 
@@ -84,16 +96,16 @@ def block_permutation(G, Z):
     return G_perm
 
 
-def community_estimation(G1, G2, min_components=2, max_components=None):
+def community_estimation(G1, G2=None, min_components=2, max_components=None):
     """
-    Estimate the community assignments of the vertices of random graphs G1 and G2
-    assuming the two graphs have the same community structure
+    Estimate the community assignments of the vertices of a single random graph or a pair
+    when estimate for pair of graphs, assuming the two graphs have the same community structure
     First jointly embed G1 and G2, then cluster the embedding by GMM
     Parameters
     ----------
     G1: ndarray (n_vertices, n_vertices)
         Adjacency matrix representing the first random graph.
-    G2: ndarray (n_vertices, n_vertices)
+    G2: ndarray (n_vertices, n_vertices), default=None
         Adjacency matrix representing the second random graph.
     min_components : int, default=2.
         The minimum number of mixture components to consider (unless
@@ -109,7 +121,10 @@ def community_estimation(G1, G2, min_components=2, max_components=None):
         Vector representing the estimated community assignments of each vertex (zero-indexed)
         Example: if Zhat[i] == 2, then the ith vertex is estimated to belong to the 3rd community
     """
-    Vhat = MultipleASE().fit_transform([G1, G2])
+    if G2 is None:
+        Vhat = AdjacencySpectralEmbed().fit_transform(G1)
+    else:
+        Vhat = MultipleASE().fit_transform([G1, G2])
     # TODO: use graspologic.cluster.gclust after the bug is fixed
     # for now, manual iterate over GaussianMixture
     # Deal with number of clusters
@@ -132,3 +147,63 @@ def community_estimation(G1, G2, min_components=2, max_components=None):
     best_model = models[np.argmin(bics)]
     Zhat = best_model.predict(Vhat)
     return Zhat
+
+
+def pearson_graph(G1, G2):
+    """
+    Naively apply pearson correlation on a pair of graphs 
+    by measuring the correlation between the vectorized adjacency matrices
+    """
+    # ignore the diagonal entries and calculate the correlation between the upper triangulars
+    triu_idx = np.triu_indices(G1.shape[0], k=1)
+    return np.corrcoef(G1[triu_idx], G2[triu_idx])[0, 1]
+
+
+def pearson_exact_pvalue(G1, G2):
+    """
+    Naively compute the p-value of a correlation test on a pair of graphs
+    by an exact t-test
+    """
+    triu_idx = np.triu_indices(G1.shape[0], k=1)
+    _, pval = pearsonr(G1[triu_idx], G2[triu_idx])
+    return pval
+
+def vertex_permutation(G):
+    """
+    Permute the vertices of random graph G
+    """
+    vertex_ind = np.arange(G.shape[0])
+    vertex_ind_perm = np.random.permutation(vertex_ind)
+    G_perm = G[vertex_ind_perm, :][:, vertex_ind_perm]
+    return G_perm
+
+
+def power_estimation(test_stats_null, test_stats_alt, alpha):
+    """
+    Estimate power based on the test statistics generated from simulated experiments
+    note the test is two-sided
+    test statistics under the null are used to estimate the rejection region
+    """
+    nmc = test_stats_null.size
+    c1 = np.sort(test_stats_null)[math.floor(alpha / 2 * nmc)]
+    c2 = np.sort(test_stats_null)[math.ceil((1 - alpha / 2) * nmc)]
+    power = np.where((test_stats_alt > c2) | (test_stats_alt < c1))[0].size / nmc
+    return power
+
+
+def permutation_pvalue(G1, G2, Z, num_perm):
+    """
+    Estimate p-value via a block permutation test
+    """
+    obs_test_stat = gcorr(G1, G2, Z)
+    null_test_stats = np.zeros(num_perm)
+    for i in range(num_perm):
+        G2_perm = block_permutation(G2, Z)
+        null_test_stats[i] = gcorr(G1, G2_perm, Z)
+    num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
+    if num_extreme < num_perm / 2:
+        # P(T > t | H0) is smaller 
+        return 2 * num_extreme / num_perm
+    else:
+        # P(T < t | H0) is smaller
+        return 2 * (num_perm - num_extreme) / num_perm
