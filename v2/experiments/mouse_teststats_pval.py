@@ -2,10 +2,11 @@ import numpy as np
 import pickle
 import argparse
 from core import gcorr, community_estimation, block_permutation, permutation_pvalue
-
+from utils import binarize
 
 parser = argparse.ArgumentParser()
 parser.add_argument('option', type=int, help='1: test statistics; 2: p-value')
+parser.add_argument('transformation', nargs='?', default='untransformed', help='transformation applied to the graphs')
 parser.add_argument('Z_given', type=int, nargs='?', default=1, help='whether the true community assignment is given')
 parser.add_argument('num_iter', type=int, nargs='?', default=500, help='number of iterations of permutation for computing p-value')
 args = parser.parse_args()
@@ -20,15 +21,26 @@ if args.Z_given:
     output_path += '_Zgiven'
 else:
     output_path += '_Zestimated'
-output_path += '.pkl'
+
+graphs_input_path = 'data/mouse_graphs'
+Zhat_input_path = 'outputs/mouse_Zhat_dict'
+if args.transformation not in [
+        'untransformed',
+        'binarize'
+    ]:
+    raise ValueError('{} is not implemented'.format(args.transformation))
+else :
+    graphs_input_path += '_' + args.transformation
+    Zhat_input_path += '_' + args.transformation
+    output_path += '_' + args.transformation
 
 
-with open('data/mouse_graphs.pkl', 'rb') as f:
+with open(graphs_input_path + '.pkl', 'rb') as f:
     graphs = pickle.load(f)
+with open(Zhat_input_path + '.pkl', 'rb') as f:
+    Zhat = pickle.load(f)
 with open('data/mouse_community_assignments.pkl', 'rb') as f:
     Ztrue = pickle.load(f)
-with open('data/mouse_Zhat_dict.pkl', 'rb') as f:
-    Zhat = pickle.load(f)
 
 
 def run_test_stats():
@@ -78,5 +90,5 @@ if args.option == 1:
 elif args.option == 2:
     results = run_pvalue()
 
-with open(output_path, 'wb') as f:
+with open(output_path + '.pkl', 'wb') as f:
     pickle.dump(results, f)
