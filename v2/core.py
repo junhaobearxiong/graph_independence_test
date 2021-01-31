@@ -1,10 +1,14 @@
 import numpy as np
 import math
 from scipy.stats import pearsonr
-from graspologic.utils import symmetrize
-from graspologic.embed import AdjacencySpectralEmbed, MultipleASE
 # from graspologic.cluster.gclust import GaussianCluster
 from sklearn.mixture import GaussianMixture
+from tqdm import tqdm
+
+from graspologic.utils import symmetrize
+from graspologic.embed import AdjacencySpectralEmbed, MultipleASE
+from graspologic.models import DCSBMEstimator
+
 from utils import off_diag
 
 
@@ -200,6 +204,47 @@ def permutation_pvalue(G1, G2, Z, num_perm):
     for i in range(num_perm):
         G2_perm = block_permutation(G2, Z)
         null_test_stats[i] = gcorr(G1, G2_perm, Z)
+    num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
+    if num_extreme < num_perm / 2:
+        # P(T > t | H0) is smaller 
+        return 2 * num_extreme / num_perm
+    else:
+        # P(T < t | H0) is smaller
+        return 2 * (num_perm - num_extreme) / num_perm
+
+
+def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None):
+    """
+    Compute a test statistic based on DC-SBM fit
+    Note this test statistic doesn't require the vertex assignment
+    """
+    if G1_dcsbm is None:
+        G1_dcsbm = DCSBMEstimator(directed=False, max_comm=max_comm).fit(G1)
+    if G2_dcsbm is None:
+        G2_dcsbm = DCSBMEstimator(directed=False, max_comm=max_comm).fit(G2)
+    # since the diagonal entries are forced to be zeros in graphs with no loops
+    # we should ignore them in the calculation of correlation 
+    g1 = off_diag(G1)
+    g2 = off_diag(G2)
+    phat = off_diag(G1_dcsbm.p_mat_)
+    qhat = off_diag(G2_dcsbm.p_mat_)
+
+    # calculate the test statistic
+    T = np.sum((g1 - phat) * (g2 - qhat)) / np.sqrt(np.sum(np.square(g1 - phat)) * np.sum(np.square(g2 - qhat)))
+    return T
+
+
+def dcsbm_pvalue(G1, G2, max_comm, num_perm):
+    """
+    Estimate p-value via parametric bootstrap, i.e. fit a DC-SBM
+    """
+    G1_dcsbm = DCSBMEstimator(directed=False).fit(G1)
+    G2_dcsbm = DCSBMEstimator(directed=False).fit(G2)
+    obs_test_stat = gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm, G2_dcsbm)
+    null_test_stats = np.zeros(num_perm)
+    for i in tqdm(range(num_perm)):
+        G2_bootstrap = G2_dcsbm.sample()[0]
+        null_test_stats[i] = gcorr_dcsbm(G1, G2_bootstrap, max_comm, G1_dcsbm)
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:
         # P(T > t | H0) is smaller 

@@ -1,7 +1,8 @@
 import numpy as np
-from graspologic.simulations import sample_edges
+from graspologic.simulations import sample_edges, sample_edges_corr, sbm
 from graspologic.simulations.simulations_corr import check_dirloop, check_r
 from graspologic.utils import symmetrize
+from graspologic.models import DCSBMEstimator
 
 
 def get_lowest_r(p, q):
@@ -395,3 +396,21 @@ def sbm_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
         G2 = G2 - np.diag(np.diag(G2))
     return G1, G2
 
+
+def dcsbm_corr(n, p, r, theta, directed=False, loops=False):
+    '''
+    Sample a pair of DC-SBM with the same marginal probabilities
+    '''
+    Z = np.repeat(np.arange(0, np.array(n).size), n)
+    R = r * np.ones((np.sum(n), np.sum(n)))
+    # sample a DC-SBM w/ block prob p
+    G = sbm(n, p, dc=theta)
+    # fit DC-SBM to G1 to estimate P
+    G_dcsbm = DCSBMEstimator(directed=False).fit(G, y=Z)
+    p_mat = G_dcsbm.p_mat_
+    # P could be out of range
+    p_mat[p_mat > 1] = 1
+    p_mat[p_mat < 0] = 0
+    # sample correlated graphs based on P
+    G1, G2 = sample_edges_corr(p_mat, R, directed, loops)
+    return G1, G2
