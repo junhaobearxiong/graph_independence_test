@@ -46,12 +46,14 @@ else :
 
 with open(graphs_input_path + '.pkl', 'rb') as f:
     graphs = pickle.load(f)
-with open(Zhat_input_path + '.pkl', 'rb') as f:
-    Zhat = pickle.load(f)
 
-if args.Z_given:
-    with open('data/{}_community_assignments.pkl'.format(args.data), 'rb') as f:
-        Ztrue = pickle.load(f)
+if not args.dc:
+    if args.Z_given:
+        with open('data/{}_community_assignments.pkl'.format(args.data), 'rb') as f:
+            Ztrue = pickle.load(f)
+    else:
+        with open(Zhat_input_path + '.pkl', 'rb') as f:
+            Zhat = pickle.load(f)
 
 # set the number of maximum components for DC-SBM community estimation
 if args.data == 'mouse':
