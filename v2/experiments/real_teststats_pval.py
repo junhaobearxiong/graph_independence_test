@@ -5,7 +5,7 @@ from core import gcorr, community_estimation, block_permutation, permutation_pva
 from utils import binarize
 
 parser = argparse.ArgumentParser()
-parser.add_argument('data', help='`mouse` or `timeseries`')
+parser.add_argument('data', help='`mouse` or `timeseries` or `cpac200` or `enron`')
 parser.add_argument('option', type=int, help='1: test statistics; 2: p-value')
 parser.add_argument('dc', type=int, help='whether to use the degree corrected test statistics')
 parser.add_argument('Z_given', type=int, nargs='?', default=0, help='whether the true community assignment is given')
@@ -39,13 +39,14 @@ if args.transformation not in [
         'simpleNonzero'
     ]:
     raise ValueError('{} is not implemented'.format(args.transformation))
-else :
+else:
     graphs_input_path += '_' + args.transformation
     Zhat_input_path += '_' + args.transformation
     output_path += '_' + args.transformation
 
 with open(graphs_input_path + '.pkl', 'rb') as f:
     graphs = pickle.load(f)
+
 
 if not args.dc:
     if args.Z_given:
@@ -56,10 +57,12 @@ if not args.dc:
             Zhat = pickle.load(f)
 
 # set the number of maximum components for DC-SBM community estimation
-if args.data == 'mouse':
+if 'mouse' in args.data:
     max_comm = 20
-elif args.data == 'timeseries':
+elif 'timeseries' in args.data:
     max_comm = 10
+elif 'cpac200' in args.data or 'enron' in args.data:
+    max_comm = 15
 
 print('output path: {}'.format(output_path))
 

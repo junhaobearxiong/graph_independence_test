@@ -213,7 +213,7 @@ def permutation_pvalue(G1, G2, Z, num_perm):
         return 2 * (num_perm - num_extreme) / num_perm
 
 
-def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None):
+def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=True):
     """
     Compute a test statistic based on DC-SBM fit
     Note this test statistic doesn't require the vertex assignment
@@ -228,9 +228,19 @@ def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None):
     g2 = off_diag(G2)
     phat = off_diag(G1_dcsbm.p_mat_)
     qhat = off_diag(G2_dcsbm.p_mat_)
+    # trim the estimated probability matrix
+    epsilon = 1e-3
+    phat[phat > 1 - epsilon] = 1 - epsilon
+    phat[phat < epsilon] = epsilon
+    qhat[qhat > 1 - epsilon] = 1 - epsilon
+    qhat[qhat < epsilon] = epsilon
 
     # calculate the test statistic
-    T = np.sum((g1 - phat) * (g2 - qhat)) / np.sqrt(np.sum(np.square(g1 - phat)) * np.sum(np.square(g2 - qhat)))
+    if pooled_variance:
+        T = np.sum((g1 - phat) * (g2 - qhat)) / np.sqrt(np.sum(np.square(g1 - phat)) * np.sum(np.square(g2 - qhat)))
+    else:
+        num_vertices = G1.shape[0]
+        T = np.sum((g1 - phat) * (g2 - qhat) / np.sqrt(phat * (1 - phat) * qhat * (1 - qhat))) / (num_vertices * (num_vertices - 1))
     return T
 
 

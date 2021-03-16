@@ -8,15 +8,10 @@ import argparse
 from core import community_estimation
 
 parser = argparse.ArgumentParser()
-parser.add_argument('data', help='`mouse` or `timeseries`')
+parser.add_argument('data', help='`mouse` or `timeseries` or `enron`')
 parser.add_argument('transformation', nargs='?', default='untransformed', help='transformation applied to the graphs')
 args = parser.parse_args()
 
-if args.data not in [
-    'mouse',
-    'timeseries'
-    ]:
-    raise ValueError('data `{}` does not exist'.format(args.data))
 
 if args.transformation not in [
         'untransformed',
@@ -26,10 +21,12 @@ if args.transformation not in [
     raise ValueError('{} is not implemented'.format(args.transformation))
 
 # the maximum number of components to iterate over when estimating assignments 
-if args.data == 'mouse':
+if 'mouse' in args.data:
     max_comp = 20
-elif args.data == 'timeseries':
+elif 'timeseries' in args.data:
     max_comp = 10
+elif 'enron' in args.data or 'cpac' in args.data:
+    max_comp = 15
 
 with open('data/{}_graphs_{}.pkl'.format(args.data, args.transformation), 'rb') as f:
     graphs = pickle.load(f)
