@@ -213,15 +213,16 @@ def permutation_pvalue(G1, G2, Z, num_perm):
         return 2 * (num_perm - num_extreme) / num_perm
 
 
-def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=True):
+def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=True, min_comm=1, epsilon=1e-3):
     """
     Compute a test statistic based on DC-SBM fit
     Note this test statistic doesn't require the vertex assignment
+    optionally give fitted DC-SBM to save computation time
     """
     if G1_dcsbm is None:
-        G1_dcsbm = DCSBMEstimator(directed=False, max_comm=max_comm).fit(G1)
+        G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G1)
     if G2_dcsbm is None:
-        G2_dcsbm = DCSBMEstimator(directed=False, max_comm=max_comm).fit(G2)
+        G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G2)
     # since the diagonal entries are forced to be zeros in graphs with no loops
     # we should ignore them in the calculation of correlation 
     g1 = off_diag(G1)
@@ -229,7 +230,6 @@ def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=
     phat = off_diag(G1_dcsbm.p_mat_)
     qhat = off_diag(G2_dcsbm.p_mat_)
     # trim the estimated probability matrix
-    epsilon = 1e-3
     phat[phat > 1 - epsilon] = 1 - epsilon
     phat[phat < epsilon] = epsilon
     qhat[qhat > 1 - epsilon] = 1 - epsilon
@@ -244,17 +244,17 @@ def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=
     return T
 
 
-def dcsbm_pvalue(G1, G2, max_comm, num_perm):
+def dcsbm_pvalue(G1, G2, max_comm, num_perm, min_comm=1):
     """
     Estimate p-value via parametric bootstrap, i.e. fit a DC-SBM
     """
-    G1_dcsbm = DCSBMEstimator(directed=False).fit(G1)
-    G2_dcsbm = DCSBMEstimator(directed=False).fit(G2)
+    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G1)
+    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G2)
     obs_test_stat = gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm, G2_dcsbm)
     null_test_stats = np.zeros(num_perm)
     for i in tqdm(range(num_perm)):
         G2_bootstrap = G2_dcsbm.sample()[0]
-        null_test_stats[i] = gcorr_dcsbm(G1, G2_bootstrap, max_comm, G1_dcsbm)
+        null_test_stats[i] = gcorr_dcsbm(G1, G2_bootstrap, min_comm=min_comm, max_comm=max_comm, G1_dcsbm=G1_dcsbm)
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:
         # P(T > t | H0) is smaller 
