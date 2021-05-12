@@ -21,7 +21,7 @@ The following files correspond (roughly) to figures in the manuscript. Results c
 ### Real data experiments
 
 This directory currently contains the code to run experiment on the the following datasets:
-1. `mouse`: a [dataset](https://github.com/v715/popcon/tree/master/popcon/datasets/data/duke) containing connectomes of 4 different species of mice
+1. `mouse`: a [dataset](https://github.com/v715/popcon/tree/master/popcon/datasets/data/duke) containing connectomes of 4 different species of mice. See some results [here](https://docs.google.com/presentation/d/1a6apm87ZGxA7ANaeUwNKx0j9KM_-_bDFbyTGFJrH2eM/edit?usp=sharing)
 2. `timeseries`: a dataset containing the connectome of a single subject sequenced over many time points in time
 3. `cpac200`: a dataset with connectomes from different subjects.
 4. `enron`: a dataset where each graph represent email correspondence between subjects in a network.
@@ -31,6 +31,14 @@ To run experiments on the associated dataset, the standard workflow is as follow
 2. (optional) Apply a transformation to the graphs using `experiments/real_transfrom_data.py` 
 3. (optional) Estimate community assignments of the graphs using `experiments/real_community_estimation.py`, if the test statistics and p-value methods you are using required community assignments to be given.
 4. Run `experiments/real_teststats_pval.py` with the appropriate command-line arguments
+
+### Current limitations
+
+Currently, simulation results look good, but the main problem is that we seem to have a big type I error inflation in the real data (the test rarely rejects the null, so we have very low p-values across the board, even when we don’t think there should be acutal dependence). One proposed fix is to use a DC-SBM based test, which seems to work in simulation when the generating models are DC-SBMs, but in real data, it still doesn’t seem to decrease the test statistic or results in a more reasonable p-values. 
+
+Also, the test statistics seem to reflect meaningful difference in some datasets (e.g. `mouse`), but not others (e.g. `timeseries`, `cpac200`). It is unclear whether this is because the signal is just not in those datasets, or the test is not powered enough to detect the signal, or due to some preprocessing choices (e.g. choosing the appropriate trimming values for DC-SBM).
+
+Some attempts to address the aforementioned problems can be seen [here](https://docs.google.com/presentation/d/1cfZ5OGZ9TjzdoIOxXt-twGXOsar_RUMo40VFIUnk98o/edit?usp=sharing). 
 
 ## Setup
 
