@@ -25,11 +25,10 @@ This directory currently contains the code to run experiment on the the followin
 4. `enron`
 
 To run experiments on the associated dataset, here is a standard workflow:
-1. Find the files in `data_utils` to preprocess the raw data into `numpy.array`
+1. Preprocess the raw dataset into a `numpy.array` with the following format: [# graphs, # vertices, # vertices]. You may need to write parts of this, but it should be straightforward using the functions available in `data_utils`.
 2. (optional) Apply a transformation to the graphs using `experiments/real_transfrom_data.py` 
 3. (optional) Estimate community assignments of the graphs using `experiments/real_community_estimation.py`
 4. Run `experiments/real_teststats_pval.py` with the appropriate command-line arguments
-
 
 # Setup
 
