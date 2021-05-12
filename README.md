@@ -2,7 +2,7 @@
 
 This repository contains the code for running the experiments in the manuscript: [Xiong, Junhao, et al. “Graph Independence Testing.” arXiv preprint arXiv: 1906.03661 (2019)](https://arxiv.org/abs/1906.03661). The manuscript is currently under major revision, so is the code, so you may not find the exact code to reproduce the figures in the manuscript.
 
-# Files
+## Files
 
 The main functions with the core functionalities are in `core.py`, which contains function to compute test statistics, p-values, powers, etc.
 
@@ -30,7 +30,7 @@ To run experiments on the associated dataset, here is a standard workflow:
 3. (optional) Estimate community assignments of the graphs using `experiments/real_community_estimation.py`
 4. Run `experiments/real_teststats_pval.py` with the appropriate command-line arguments
 
-# Setup
+## Setup
 
 Install Python 3.6. You can use `pyenv` to manage the Python versions on your machine.
 
