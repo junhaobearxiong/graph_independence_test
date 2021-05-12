@@ -1,6 +1,8 @@
 # Graph Independence Testing
 
-This repository contains the code for running the experiments in the manuscript: [Xiong, Junhao, et al. “Graph Independence Testing.” arXiv preprint arXiv: 1906.03661 (2019)](https://arxiv.org/abs/1906.03661). The manuscript is currently under major revision, so is the code, so you may not find the exact code to reproduce the figures in the manuscript.
+This repository contains the code for running the experiments in the manuscript: [Xiong, Junhao, et al. “Graph Independence Testing.” arXiv preprint arXiv: 1906.03661 (2019)](https://arxiv.org/abs/1906.03661). 
+
+The manuscript is currently under major revision, so is the code, so you may not find the exact code to reproduce the figures in the manuscript. For some more updated results, you may consult the slides [here](https://drive.google.com/drive/folders/1nd0Nfo4pknZiNQvi45INnvo6xjMIfP-d?usp=sharing). 
 
 ## Files
 
