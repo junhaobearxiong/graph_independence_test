@@ -195,15 +195,29 @@ def power_estimation(test_stats_null, test_stats_alt, alpha):
     return power
 
 
-def permutation_pvalue(G1, G2, Z, num_perm):
+def block_permutation_pvalue(G1, G2, test, num_perm, Z=None):
     """
     Estimate p-value via a block permutation test
     """
-    obs_test_stat = gcorr(G1, G2, Z)
+    if test not in ['gcorr', 'pearson']:
+        raise ValueError('`test` needs to be `gcorr` or `pearson`, not {}'.format(test))
+    
+    if test == 'gcorr' and Z is None:
+        raise ValueError('please provide `Z` for `gcorr`')
+
+    if test == 'gcorr':
+        obs_test_stat = gcorr(G1, G2, Z)
+    elif test == 'pearson':
+        obs_test_stat = pearson_graph(G1, G2)
+
     null_test_stats = np.zeros(num_perm)
     for i in range(num_perm):
         G2_perm = block_permutation(G2, Z)
-        null_test_stats[i] = gcorr(G1, G2_perm, Z)
+        if test == 'gcorr':
+            null_test_stats[i] = gcorr(G1, G2_perm, Z)
+        elif test == 'pearson':
+            null_test_stats[i] = pearson_graph(G1, G2_perm)
+
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:
         # P(T > t | H0) is smaller 
@@ -213,7 +227,7 @@ def permutation_pvalue(G1, G2, Z, num_perm):
         return 2 * (num_perm - num_extreme) / num_perm
 
 
-def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=True, min_comm=1, epsilon=1e-3):
+def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3):
     """
     Compute a test statistic based on DC-SBM fit
     Note this test statistic doesn't require the vertex assignment
@@ -230,10 +244,10 @@ def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=
     phat = off_diag(G1_dcsbm.p_mat_)
     qhat = off_diag(G2_dcsbm.p_mat_)
     # trim the estimated probability matrix
-    phat[phat > 1 - epsilon] = 1 - epsilon
-    phat[phat < epsilon] = epsilon
-    qhat[qhat > 1 - epsilon] = 1 - epsilon
-    qhat[qhat < epsilon] = epsilon
+    phat[phat < epsilon1] = epsilon1
+    phat[phat > 1 - epsilon2] = 1 - epsilon2
+    qhat[qhat < epsilon1] = epsilon1
+    qhat[qhat > 1 - epsilon2] = 1 - epsilon2
 
     # calculate the test statistic
     if pooled_variance:
@@ -244,17 +258,19 @@ def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=
     return T
 
 
-def dcsbm_pvalue(G1, G2, max_comm, num_perm, min_comm=1):
+def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3):
     """
     Estimate p-value via parametric bootstrap, i.e. fit a DC-SBM
     """
     G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G1)
     G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G2)
-    obs_test_stat = gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm, G2_dcsbm)
+    obs_test_stat = gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm, G2_dcsbm, 
+        pooled_variance=pooled_variance, min_comm=min_comm, epsilon1=epsilon1, epsilon2=epsilon2)
     null_test_stats = np.zeros(num_perm)
     for i in tqdm(range(num_perm)):
         G2_bootstrap = G2_dcsbm.sample()[0]
-        null_test_stats[i] = gcorr_dcsbm(G1, G2_bootstrap, min_comm=min_comm, max_comm=max_comm, G1_dcsbm=G1_dcsbm)
+        null_test_stats[i] = gcorr_dcsbm(G1, G2_bootstrap, G1_dcsbm=G1_dcsbm, min_comm=min_comm, max_comm=max_comm,
+            pooled_variance=pooled_variance, epsilon1=epsilon1, epsilon2=epsilon2)
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:
         # P(T > t | H0) is smaller 
