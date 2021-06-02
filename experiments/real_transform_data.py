@@ -19,6 +19,10 @@ def apply_func_to_all_graphs(g, func, **kwargs):
     return g_new
 
 
+def log10(g):
+    g[g > 0] = np.log10(g[g > 0])
+    return g
+
 with open('data/{}_graphs_untransformed.pkl'.format(args.data), 'rb') as f:
     graphs_orig = pickle.load(f)
 
@@ -30,6 +34,9 @@ if args.transformation == 'binarize':
 elif args.transformation == 'simpleNonzero':
 	graphs = apply_func_to_all_graphs(graphs_orig, pass_to_ranks)
 	output_path += '_simpleNonzero'
+elif args.transformation == 'log10':
+    graphs = apply_func_to_all_graphs(graphs_orig, log10)
+    output_path += '_log10'
 else:
     raise ValueError('{} is not implemented'.format(args.transformation))
 output_path += '.pkl'

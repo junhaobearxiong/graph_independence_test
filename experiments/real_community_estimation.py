@@ -16,7 +16,8 @@ args = parser.parse_args()
 if args.transformation not in [
         'untransformed',
         'binarize',
-        'simpleNonzero'
+        'simpleNonzero',
+        'log10'
     ]:
     raise ValueError('{} is not implemented'.format(args.transformation))
 

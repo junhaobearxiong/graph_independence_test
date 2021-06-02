@@ -34,6 +34,7 @@ max_comm = 5
 tests = [
     'gcorr_block_perm',
     'gcorr_param_bootstrap',
+    'gcorrDC_block_perm',
     'gcorrDC_param_bootstrap'
 ]
 
@@ -65,17 +66,20 @@ for i in range(num_vertices.size):
         # Z = np.repeat([0, 1], n)
         G2_block_perm = block_permutation(G2, Z)
 
-        G1_dcsbm = DCSBMEstimator(directed=False).fit(G1)
         # null by parametric bootstrap
+        G1_dcsbm = DCSBMEstimator(directed=False).fit(G1)
         G2_dcsbm = DCSBMEstimator(directed=False).fit(G2)
+        G1_bootstrap = G1_dcsbm.sample()[0]
         G2_bootstrap = G2_dcsbm.sample()[0]
 
         test_stats_alt['gcorr_block_perm'][i, rep] = gcorr(G1, G2, Z)
         test_stats_null['gcorr_block_perm'][i, rep] = gcorr(G1, G2_block_perm, Z)
         test_stats_alt['gcorr_param_bootstrap'][i, rep] = gcorr(G1, G2, Z)
-        test_stats_null['gcorr_param_bootstrap'][i, rep] = gcorr(G1, G2_bootstrap, Z)
-        test_stats_alt['gcorrDC_param_bootstrap'][i, rep] = gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm, G2_dcsbm)
-        test_stats_null['gcorrDC_param_bootstrap'][i, rep] = gcorr_dcsbm(G1, G2_bootstrap, max_comm, G1_dcsbm, G2_dcsbm)
+        test_stats_null['gcorr_param_bootstrap'][i, rep] = gcorr(G1_bootstrap, G2_bootstrap, Z)
+        test_stats_alt['gcorrDC_param_bootstrap'][i, rep] = gcorr_dcsbm(G1, G2, max_comm)
+        test_stats_null['gcorrDC_param_bootstrap'][i, rep] = gcorr_dcsbm(G1_bootstrap, G2_bootstrap, max_comm)
+        test_stats_alt['gcorrDC_block_perm'][i, rep] = gcorr_dcsbm(G1, G2, max_comm)
+        test_stats_null['gcorrDC_block_perm'][i, rep] = gcorr_dcsbm(G1, G2_block_perm, max_comm)
 
 
 # compute power

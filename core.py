@@ -12,7 +12,7 @@ from graspologic.models import DCSBMEstimator
 from utils import off_diag
 
 
-def gcorr(G1, G2, Z):
+def gcorr(G1, G2, Z, pooled_variance=True, epsilon1=1e-3, epsilon2=1e-3):
     """
     Compute the `gcorr` test statistic between a pair of graphs G1, G2
     given the community assignment vector Z
@@ -71,7 +71,16 @@ def gcorr(G1, G2, Z):
     qhat = off_diag(Qhat)
 
     # calculate the test statistic
-    T = np.sum((g1 - phat) * (g2 - qhat)) / np.sqrt(np.sum(np.square(g1 - phat)) * np.sum(np.square(g2 - qhat)))
+    if pooled_variance:
+        T = np.sum((g1 - phat) * (g2 - qhat)) / np.sqrt(np.sum(np.square(g1 - phat)) * np.sum(np.square(g2 - qhat)))
+    else:
+        # trim the estimated probability matrix
+        phat[phat < epsilon1] = epsilon1
+        phat[phat > 1 - epsilon2] = 1 - epsilon2
+        qhat[qhat < epsilon1] = epsilon1
+        qhat[qhat > 1 - epsilon2] = 1 - epsilon2
+        num_vertices = G1.shape[0]
+        T = np.sum((g1 - phat) * (g2 - qhat) / np.sqrt(phat * (1 - phat) * qhat * (1 - qhat))) / (num_vertices * (num_vertices - 1))
     return T
 
 
@@ -227,16 +236,23 @@ def block_permutation_pvalue(G1, G2, test, num_perm, Z=None):
         return 2 * (num_perm - num_extreme) / num_perm
 
 
-def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3):
+def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None):
     """
     Compute a test statistic based on DC-SBM fit
     Note this test statistic doesn't require the vertex assignment
     optionally give fitted DC-SBM to save computation time
+    Note: if `G1_dcsbm` or `G2_dcsbm` is given, the estimated P matrices are extracted from these model fits
+    otherwise, they are extracted from the model fitted on `G1`, `G2`
     """
-    if G1_dcsbm is None:
-        G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G1)
-    if G2_dcsbm is None:
-        G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G2)
+    # if we are fixing the number of communities, we should also fix the number of latent dimensions of the embedding
+    # otherwise (when we let the algorithm to automatically choose the number of communities)
+    # we also let it choose the number of latent dimensions
+    if min_comm == max_comm:
+        K = min_comm
+    else:
+        K = None
+    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G1, y=Z)
+    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G2, y=Z)
     # since the diagonal entries are forced to be zeros in graphs with no loops
     # we should ignore them in the calculation of correlation 
     g1 = off_diag(G1)
@@ -258,18 +274,27 @@ def gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm=None, G2_dcsbm=None, pooled_variance=
     return T
 
 
-def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3):
+def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None):
     """
     Estimate p-value via parametric bootstrap, i.e. fit a DC-SBM
     """
-    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G1)
-    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm).fit(G2)
-    obs_test_stat = gcorr_dcsbm(G1, G2, max_comm, G1_dcsbm, G2_dcsbm, 
-        pooled_variance=pooled_variance, min_comm=min_comm, epsilon1=epsilon1, epsilon2=epsilon2)
+    # if we are fixing the number of communities, we should also fix the number of latent dimensions of the embedding
+    # otherwise (when we let the algorithm to automatically choose the number of communities)
+    # we also let it choose the number of latent dimensions
+    if min_comm == max_comm:
+        K = min_comm
+    else:
+        K = None
+    obs_test_stat = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm,
+        pooled_variance=pooled_variance, epsilon1=epsilon1, epsilon2=epsilon2)
+    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G1, y=Z)
+    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G2, y=Z)
+    # create bootstrap samples
+    G1_bootstrap = G1_dcsbm.sample(n_samples=num_perm)
+    G2_bootstrap = G2_dcsbm.sample(n_samples=num_perm)
     null_test_stats = np.zeros(num_perm)
     for i in tqdm(range(num_perm)):
-        G2_bootstrap = G2_dcsbm.sample()[0]
-        null_test_stats[i] = gcorr_dcsbm(G1, G2_bootstrap, G1_dcsbm=G1_dcsbm, min_comm=min_comm, max_comm=max_comm,
+        null_test_stats[i] = gcorr_dcsbm(G1_bootstrap[i], G2_bootstrap[i], min_comm=min_comm, max_comm=max_comm,
             pooled_variance=pooled_variance, epsilon1=epsilon1, epsilon2=epsilon2)
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:

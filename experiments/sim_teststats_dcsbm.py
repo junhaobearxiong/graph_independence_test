@@ -25,6 +25,7 @@ result = {
     'gcorr_dcsbm_pooled': np.zeros((num_corr, num_rep)),
     'gcorr_dcsbm': np.zeros((num_corr, num_rep))
 }
+
 for i, r in enumerate(corr):
     print('iteration {} in {}: r = {}'.format(i + 1, num_corr, r))
     for j in tqdm(range(num_rep)):
