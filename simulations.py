@@ -397,7 +397,7 @@ def sbm_corr_weighted(n, mu1, mu2, Sigma, directed=False, loops=False):
     return G1, G2
 
 
-def dcsbm_corr(n, p, r, theta, directed=False, loops=False):
+def dcsbm_corr(n, p, r, theta, epsilon1=1e-3, epsilon2=1e-3, directed=False, loops=False):
     '''
     Sample a pair of DC-SBM with the same marginal probabilities
     '''
@@ -409,8 +409,8 @@ def dcsbm_corr(n, p, r, theta, directed=False, loops=False):
     G_dcsbm = DCSBMEstimator(directed=False).fit(G, y=Z)
     p_mat = G_dcsbm.p_mat_
     # P could be out of range
-    p_mat[p_mat > 1] = 1
-    p_mat[p_mat < 0] = 0
+    p_mat[p_mat < epsilon1] = epsilon1
+    p_mat[p_mat > 1 - epsilon2] = 1 - epsilon2
     # sample correlated graphs based on P
     G1, G2 = sample_edges_corr(p_mat, R, directed, loops)
     return G1, G2

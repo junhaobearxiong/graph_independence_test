@@ -26,9 +26,9 @@ if 'mouse' in args.data:
 elif 'timeseries' in args.data:
     max_comm = 10
 elif 'cpac200' in args.data:
-    max_comm = 15
+    max_comm = 10
 elif 'enron' in args.data:
-    max_comm = 15
+    max_comm = 30
     epsilon1 = 1e-5
 
 
@@ -50,18 +50,19 @@ def format_output_path(args):
     elif args.option == 2:
         output_path += '_pvalues'
 
-    if args.pooled_variance:
-        output_path += '_pooled'
-    else:
-        output_path += '_unpooled'
+    if args.test != 3:
+        if args.pooled_variance:
+            output_path += '_pooled'
+        else:
+            output_path += '_unpooled'
 
-    if args.Z == 1:
-        output_path += '_Ztrue'
-    elif args.Z == 2:
-        output_path += '_Zestimated'
-    # note in this case, the number of community = `max_comm`
-    elif args.Z == 3:
-        output_path += '_ZestimatedK{}'.format(max_comm)
+        if args.Z == 1:
+            output_path += '_Ztrue'
+        elif args.Z == 2:
+            output_path += '_Zestimated'
+        # note in this case, the number of community = `max_comm`
+        elif args.Z == 3:
+            output_path += '_ZestimatedK{}'.format(max_comm)
 
     if args.transformation not in [
         'untransformed',
@@ -92,7 +93,7 @@ Zhat_input_path += '_' + args.transformation
 with open(graphs_input_path + '.pkl', 'rb') as f:
     graphs = pickle.load(f)
 
-if args.Z == 1:
+if args.test != 3 and args.Z == 1:
     with open('data/{}_community_assignments.pkl'.format(args.data), 'rb') as f:
         Ztrue = pickle.load(f)
 
@@ -105,6 +106,8 @@ if args.test == 1 and args.Z == 2:
 def run_test_stats():
     num_graphs = graphs.shape[0]
     test_stats = np.zeros((num_graphs, num_graphs))
+    if args.test == 2:
+        dcsbm_fit = {}
 
     for i in range(num_graphs):
         for j in range(i + 1, num_graphs):
@@ -128,14 +131,17 @@ def run_test_stats():
                 elif args.Z == 1:
                     min_comm = 1 # is NOT used
                     Z = Ztrue
-                test_stats[i, j] = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm, epsilon1=epsilon1, epsilon2=epsilon2,
-                    pooled_variance=args.pooled_variance)
+                ts, fit = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm, epsilon1=epsilon1, epsilon2=epsilon2,
+                    pooled_variance=args.pooled_variance, Z=Z, return_fit=True)
+                test_stats[i, j] = ts
+                dcsbm_fit[(i, j)] = fit
             elif args.test == 3:
                 test_stats[i, j] = pearson_graph(G1, G2)
 
-    # test_stats += test_stats.T
-    # test_stats[np.diag_indices_from(test_stats)] = 1
-    return test_stats
+    if args.test == 2:
+        return test_stats, dcsbm_fit
+    else:
+        return test_stats
 
 
 def run_pvalue():
@@ -169,15 +175,16 @@ def run_pvalue():
             elif args.test == 3:
                 pvalues[i, j] = block_permutation_pvalue(G1, G2, test='pearson', num_perm=args.num_iter)
 
-    # pvalues += pvalues.T
-    # TODO: if want to be really rigorous, might do permutation test for this as well
-    # since theoretically null distribution could have test stats = 1
-    # pvalues[np.diag_indices_from(pvalues)] = 0
     return pvalues
 
 
 if args.option == 1:
-    results = run_test_stats()
+    if args.test == 2:
+        results, fits = run_test_stats()
+        with open(output_path + '_fits.pkl', 'wb') as f:
+            pickle.dump(fits, f)
+    else:
+        results = run_test_stats()
 elif args.option == 2:
     results = run_pvalue()
 

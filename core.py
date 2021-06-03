@@ -236,7 +236,7 @@ def block_permutation_pvalue(G1, G2, test, num_perm, Z=None):
         return 2 * (num_perm - num_extreme) / num_perm
 
 
-def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None):
+def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None, return_fit=False):
     """
     Compute a test statistic based on DC-SBM fit
     Note this test statistic doesn't require the vertex assignment
@@ -271,7 +271,12 @@ def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-
     else:
         num_vertices = G1.shape[0]
         T = np.sum((g1 - phat) * (g2 - qhat) / np.sqrt(phat * (1 - phat) * qhat * (1 - qhat))) / (num_vertices * (num_vertices - 1))
-    return T
+    
+    if return_fit:
+        dcsbm_fit = {'G1': G1_dcsbm, 'G2': G2_dcsbm}
+        return T, dcsbm_fit
+    else:
+        return T
 
 
 def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None):
