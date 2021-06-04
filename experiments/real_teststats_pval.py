@@ -97,8 +97,8 @@ if args.test != 3 and args.Z == 1:
     with open('data/{}_community_assignments.pkl'.format(args.data), 'rb') as f:
         Ztrue = pickle.load(f)
 
-# TODO: note `community_estimation` uses MASE, while community estimation within `graspologic.DCSBMEstimator` uses a separate LSE
-# for each graph
+# TODO: note `community_estimation` uses MASE, 
+# while community estimation within `graspologic.DCSBMEstimator` uses a separate LSE for each graph
 if args.test == 1 and args.Z == 2:
     with open(Zhat_input_path + '.pkl', 'rb') as f:
         Zhat = pickle.load(f)

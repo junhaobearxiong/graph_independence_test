@@ -32,6 +32,7 @@ print('Running {}, {} with r={} for {} reps'.format(sim, setting, r, num_reps))
 tests = [
     'pearson_vertex_perm',
     'pearson_block_perm',
+    'gcorr_vertex_perm',
     'gcorr_block_perm' 
 ]
 
@@ -100,6 +101,8 @@ for i in range(num_vertices.size):
         test_stats_alt['pearson_vertex_perm'][i, rep] = pearson_graph(G1, G2)
         test_stats_null['pearson_block_perm'][i, rep] = pearson_graph(G1, G2_block_perm)
         test_stats_alt['pearson_block_perm'][i, rep] = pearson_graph(G1, G2)
+        test_stats_null[['gcorr_vertex_perm']][i, rep] = gcorr(G1, G2_vertex_perm, Z)
+        test_stats_alt[['gcorr_vertex_perm']][i, rep] = gcorr(G1, G2, Z)
         test_stats_null['gcorr_block_perm'][i, rep] = gcorr(G1, G2_block_perm, Z)
         test_stats_alt['gcorr_block_perm'][i, rep] = gcorr(G1, G2, Z)
         pearson_exact_pvals[i, rep] = pearson_exact_pvalue(G1, G2)

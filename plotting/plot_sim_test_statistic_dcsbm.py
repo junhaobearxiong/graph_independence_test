@@ -6,7 +6,7 @@ import numpy as np
 labels = {
     'gcorr_pooled': 'Gcorr Pooled',
     'gcorr_unpooled': 'Gcorr Unpooled',
-    'gcorr_dcsbm_pooled': 'DCSBM Gcorr Pooled'
+    'gcorr_dcsbm_pooled': 'DCSBM Gcorr Pooled',
     'gcorr_dcsbm_unpooled': 'DCSBM Gcorr Unpooled'
 }
 
@@ -25,7 +25,7 @@ def plot_test_stats(result, ax):
         mean = result[s].mean(axis=1)
         std = result[s].std(axis=1)
         ax.errorbar(x, mean, yerr=2 * std, label=labels[s])
-    ax.plot(x, x, 'o-', label='y=x', color='r')
+    ax.plot(x, x, 'o-', label='y=x', color='black')
     ax.grid()
 
 fig, axs = plt.subplots(1, 3, figsize=(18, 5))
@@ -38,7 +38,7 @@ for i, s in enumerate(settings):
     if i == 0:
         axs[i].set_xlabel('true correlation', fontsize=fontsize)
         axs[i].set_ylabel('test statistic', fontsize=fontsize)
-        axs[i].legend(fontsize=fontsize)
+        axs[i].legend(fontsize=12)
 
 fig.suptitle('Test Statistics on Correlated Bernoulli DCSBM', fontsize=fontsize, y=0.98)
 
