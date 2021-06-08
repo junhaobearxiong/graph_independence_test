@@ -230,13 +230,13 @@ def block_permutation_pvalue(G1, G2, test, num_perm, Z=None):
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:
         # P(T > t | H0) is smaller 
-        return 2 * num_extreme / num_perm
+        return (2 * num_extreme + 1) / (num_perm + 1)
     else:
         # P(T < t | H0) is smaller
-        return 2 * (num_perm - num_extreme) / num_perm
+        return (2 * (num_perm - num_extreme) + 1) / (num_perm + 1)
 
 
-def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None, return_fit=False):
+def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z1=None, Z2=None, return_fit=False, seed=None):
     """
     Compute a test statistic based on DC-SBM fit
     Note this test statistic doesn't require the vertex assignment
@@ -251,8 +251,10 @@ def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-
         K = min_comm
     else:
         K = None
-    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G1, y=Z)
-    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G2, y=Z)
+    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K, 
+        cluster_kws={'random_state': seed}).fit(G1, y=Z1)
+    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K,
+        cluster_kws={'random_state': seed}).fit(G2, y=Z2)
     # since the diagonal entries are forced to be zeros in graphs with no loops
     # we should ignore them in the calculation of correlation 
     g1 = off_diag(G1)
@@ -279,7 +281,7 @@ def gcorr_dcsbm(G1, G2, max_comm, pooled_variance=True, min_comm=1, epsilon1=1e-
         return T
 
 
-def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z=None):
+def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, epsilon1=1e-3, epsilon2=1e-3, Z1=None, Z2=None):
     """
     Estimate p-value via parametric bootstrap, i.e. fit a DC-SBM
     """
@@ -292,8 +294,8 @@ def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, e
         K = None
     obs_test_stat = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm,
         pooled_variance=pooled_variance, epsilon1=epsilon1, epsilon2=epsilon2)
-    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G1, y=Z)
-    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G2, y=Z)
+    G1_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G1, y=Z1)
+    G2_dcsbm = DCSBMEstimator(directed=False, min_comm=min_comm, max_comm=max_comm, n_components=K).fit(G2, y=Z2)
     # create bootstrap samples
     G1_bootstrap = G1_dcsbm.sample(n_samples=num_perm)
     G2_bootstrap = G2_dcsbm.sample(n_samples=num_perm)
@@ -304,7 +306,7 @@ def dcsbm_pvalue(G1, G2, max_comm, num_perm, pooled_variance=True, min_comm=1, e
     num_extreme = np.where(null_test_stats >= obs_test_stat)[0].size
     if num_extreme < num_perm / 2:
         # P(T > t | H0) is smaller 
-        return 2 * num_extreme / num_perm
+        return (2 * num_extreme + 1) / (num_perm + 1)
     else:
         # P(T < t | H0) is smaller
-        return 2 * (num_perm - num_extreme) / num_perm
+        return (2 * (num_perm - num_extreme) + 1) / (num_perm + 1)

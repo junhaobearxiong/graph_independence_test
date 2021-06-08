@@ -11,6 +11,7 @@ labels = {
     'pearson_exact': 'Pearson analytical p-values',
     'pearson_vertex_perm': 'Pearson vertex permutation',
     'pearson_block_perm': 'Pearson block permutation',
+    'gcorr_vertex_perm': 'Gcorr vertex permutation',
     'gcorr_block_perm': 'Gcorr block permutation'
 }
 

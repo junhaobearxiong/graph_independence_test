@@ -1,34 +1,32 @@
 import numpy as np
 import pickle
 import argparse
-from core import gcorr, community_estimation, block_permutation, block_permutation_pvalue, gcorr_dcsbm, dcsbm_pvalue, pearson_graph
+from core import gcorr, community_estimation, block_permutation, block_permutation_pvalue, gcorr_dcsbm, dcsbm_pvalue, pearson_graph, pearson_exact_pvalue
 from utils import binarize
 
 parser = argparse.ArgumentParser()
 parser.add_argument('data', help='`mouse` or `timeseries` or `cpac200` or `enron`')
 parser.add_argument('test', type=int, help='1: gcorr, 2: dcsbm gcorr, 3: pearson')
 parser.add_argument('option', type=int, help='1: test statistics; 2: p-value')
+parser.add_argument('max_comm', type=int, nargs='?', default=10, help='maximum number of communities to try, note this argument has different meaning for different `Z`')
 parser.add_argument('pooled_variance', type=int, nargs='?', default=1, 
     help='whether to use the pooled variance test statistics')
 parser.add_argument('Z', type=int, nargs='?', default=1, 
     help='1: given true assignments (not available for dcsbm gcorr, 2: used estimated assignments (with optimally chosen number of K), 3: estimate assignments with fixed K')
 parser.add_argument('transformation', nargs='?', default='untransformed', help='transformation applied to the graphs')
 parser.add_argument('num_iter', type=int, nargs='?', default=500, help='number of iterations of permutation for computing p-value')
+parser.add_argument('return_fit', type=int, nargs='?', default=0, help='whether to return DCSBM fits (for debugging)')
 args = parser.parse_args()
 
+# set random seed (for GMM of DCSBM)
+seed = 42
 
 # set specific parameters for DC-SBM community estimation
 epsilon1 = 1e-3
 epsilon2 = 1e-3
 min_comm = 1
-if 'mouse' in args.data:
-    max_comm = 20
-elif 'timeseries' in args.data:
-    max_comm = 10
-elif 'cpac200' in args.data:
-    max_comm = 10
-elif 'enron' in args.data:
-    max_comm = 30
+max_comm = args.max_comm
+if 'enron' in args.data:
     epsilon1 = 1e-5
 
 
@@ -63,6 +61,9 @@ def format_output_path(args):
         # note in this case, the number of community = `max_comm`
         elif args.Z == 3:
             output_path += '_ZestimatedK{}'.format(max_comm)
+        elif args.Z == 4:
+            output_path += '_Zestimatedfromfits'
+
 
     if args.transformation not in [
         'untransformed',
@@ -74,7 +75,7 @@ def format_output_path(args):
 
     output_path += '_' + args.transformation
 
-    if args.option == 2:
+    if args.option == 2 and args.test != 3:
         output_path += '_numperm' + str(args.num_iter)
 
     return output_path
@@ -97,16 +98,17 @@ if args.test != 3 and args.Z == 1:
     with open('data/{}_community_assignments.pkl'.format(args.data), 'rb') as f:
         Ztrue = pickle.load(f)
 
-# TODO: note `community_estimation` uses MASE, 
+# note `community_estimation` uses MASE, 
 # while community estimation within `graspologic.DCSBMEstimator` uses a separate LSE for each graph
 if args.test == 1 and args.Z == 2:
     with open(Zhat_input_path + '.pkl', 'rb') as f:
         Zhat = pickle.load(f)
 
+
 def run_test_stats():
     num_graphs = graphs.shape[0]
     test_stats = np.zeros((num_graphs, num_graphs))
-    if args.test == 2:
+    if args.return_fit:
         dcsbm_fit = {}
 
     for i in range(num_graphs):
@@ -131,14 +133,19 @@ def run_test_stats():
                 elif args.Z == 1:
                     min_comm = 1 # is NOT used
                     Z = Ztrue
-                ts, fit = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm, epsilon1=epsilon1, epsilon2=epsilon2,
-                    pooled_variance=args.pooled_variance, Z=Z, return_fit=True)
-                test_stats[i, j] = ts
-                dcsbm_fit[(i, j)] = fit
+                if args.return_fit:
+                    ts, fit = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm, epsilon1=epsilon1, epsilon2=epsilon2,
+                        pooled_variance=args.pooled_variance, Z1=Z, Z2=Z, return_fit=True, seed=seed)
+                    test_stats[i, j] = ts
+                    dcsbm_fit[(i, j)] = fit
+                else:
+                    ts = gcorr_dcsbm(G1, G2, min_comm=min_comm, max_comm=max_comm, epsilon1=epsilon1, epsilon2=epsilon2,
+                        pooled_variance=args.pooled_variance, Z1=Z, Z2=Z, seed=seed)
+                    test_stats[i, j] = ts
             elif args.test == 3:
                 test_stats[i, j] = pearson_graph(G1, G2)
 
-    if args.test == 2:
+    if args.return_fit:
         return test_stats, dcsbm_fit
     else:
         return test_stats
@@ -171,15 +178,15 @@ def run_pvalue():
                     min_comm = 1 # is NOT used
                     Z = Ztrue
                 pvalues[i, j] = dcsbm_pvalue(G1, G2, min_comm=min_comm, max_comm=max_comm, epsilon1=epsilon1, epsilon2=epsilon2,
-                    pooled_variance=args.pooled_variance, num_perm=args.num_iter, Z=Z)
+                    pooled_variance=args.pooled_variance, num_perm=args.num_iter, Z1=Z, Z2=Z)
             elif args.test == 3:
-                pvalues[i, j] = block_permutation_pvalue(G1, G2, test='pearson', num_perm=args.num_iter)
+                pvalues[i, j] = pearson_exact_pvalue(G1, G2)
 
     return pvalues
 
 
 if args.option == 1:
-    if args.test == 2:
+    if args.return_fit:
         results, fits = run_test_stats()
         with open(output_path + '_fits.pkl', 'wb') as f:
             pickle.dump(fits, f)

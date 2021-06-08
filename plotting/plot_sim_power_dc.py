@@ -9,10 +9,16 @@ labels = {
     'gcorrDC_param_bootstrap': 'DCSBM Gcorr parametric bootstrap'
 }
 
+include = [
+    'gcorr_block_perm',
+    'gcorrDC_param_bootstrap'
+]
+
 def plot_power_curve(result, ax):
     x = np.linspace(20, 100, 9, dtype=int)
     for test, power in result.items():
-        ax.plot(x, power, 'o-', label=labels[test])
+        if test in include:
+            ax.plot(x, power, 'o-', label=labels[test])
     ax.grid()
 
 
